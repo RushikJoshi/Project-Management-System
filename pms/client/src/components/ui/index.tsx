@@ -1,0 +1,652 @@
+import React from 'react';
+import * as RadixTabs from '@radix-ui/react-tabs';
+import * as RadixDropdown from '@radix-ui/react-dropdown-menu';
+import * as RadixSelect from '@radix-ui/react-select';
+import * as RadixPopover from '@radix-ui/react-popover';
+import {
+  format, addMonths, subMonths, startOfMonth,
+  endOfMonth, startOfWeek, endOfWeek, isSameMonth,
+  isSameDay, addDays, eachDayOfInterval, parseISO
+} from 'date-fns';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronLeft, ChevronRight, ChevronsUpDown, ChevronDown, Check, X, Calendar, Search } from 'lucide-react';
+import { cn } from '../../utils/helpers';
+
+// ─── Tabs ────────────────────────────────────────────────────────────────────
+interface TabItem {
+  value: string;
+  label: string;
+  icon?: React.ReactNode;
+  badge?: number;
+}
+
+interface TabsProps {
+  value: string;
+  onValueChange: (v: string) => void;
+  items: TabItem[];
+  children: React.ReactNode;
+  variant?: 'underline' | 'pill';
+  className?: string;
+  actions?: React.ReactNode;
+}
+
+export const Tabs: React.FC<TabsProps> = ({
+  value, onValueChange, items, children, variant = 'underline', className, actions
+}) => (
+  <RadixTabs.Root value={value} onValueChange={onValueChange} className={className}>
+    <div className={cn(
+      'flex items-center justify-between gap-4',
+      variant === 'underline' && 'border-b border-surface-100 dark:border-surface-800'
+    )}>
+      <RadixTabs.List className={cn(
+        'flex overflow-x-auto pb-1 scrollbar-hide',
+        variant === 'underline' && 'gap-1',
+        variant === 'pill' && 'bg-surface-100 dark:bg-surface-800 p-1 rounded-xl gap-1'
+      )}>
+        {items.map(item => (
+          <RadixTabs.Trigger
+            key={item.value}
+            value={item.value}
+            className={cn(
+              'flex shrink-0 items-center gap-2 whitespace-nowrap text-sm font-medium transition-all outline-none',
+              variant === 'underline' && cn(
+                'rounded-t-lg border-b-2 px-3 py-2.5 text-xs sm:px-4 sm:text-sm -mb-[5px]',
+                value === item.value
+                  ? 'text-brand-700 dark:text-brand-300 border-brand-600'
+                  : 'text-surface-500 border-transparent hover:text-surface-700 dark:hover:text-surface-300'
+              ),
+              variant === 'pill' && cn(
+                'rounded-lg px-3 py-1.5 text-xs sm:text-sm',
+                value === item.value
+                  ? 'bg-white dark:bg-surface-900 text-surface-900 dark:text-white shadow-sm'
+                  : 'text-surface-500 hover:text-surface-700 dark:hover:text-surface-300'
+              )
+            )}
+          >
+            {item.icon}
+            {item.label}
+            {item.badge !== undefined && item.badge > 0 && (
+              <span className="w-4 h-4 bg-brand-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {item.badge}
+              </span>
+            )}
+          </RadixTabs.Trigger>
+        ))}
+      </RadixTabs.List>
+      {actions && (
+        <div className="flex items-center gap-2 pb-1">
+          {actions}
+        </div>
+      )}
+    </div>
+    {children}
+  </RadixTabs.Root>
+);
+
+export const TabsContent = RadixTabs.Content;
+
+// ─── Dropdown ────────────────────────────────────────────────────────────────
+interface DropdownItem {
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+  color?: string;
+  className?: string;
+}
+
+interface DropdownProps {
+  value: string;
+  onChange: (v: string) => void;
+  items: DropdownItem[];
+  placeholder?: string;
+  label?: string;
+  className?: string;
+  triggerClassName?: string;
+  disabled?: boolean;
+}
+
+export const Dropdown: React.FC<DropdownProps> = ({
+  value, onChange, items, placeholder = 'Select...', label, className, triggerClassName, disabled
+}) => {
+  const selected = items.find(i => i.id === value);
+
+  return (
+    <div className={cn('flex flex-col gap-1', className)}>
+      {label && <label className="text-[10px] font-bold text-surface-400 uppercase tracking-widest ml-1">{label}</label>}
+      <RadixDropdown.Root>
+        <RadixDropdown.Trigger
+          disabled={disabled}
+          className={cn(
+            "flex items-center justify-between gap-2 px-3 py-2 rounded-xl border transition-all outline-none text-xs font-semibold",
+            "bg-white dark:bg-surface-900 border-surface-100 dark:border-surface-800",
+            "hover:border-brand-300 dark:hover:border-surface-700 focus:ring-2 focus:ring-brand-500/20",
+            "disabled:opacity-50 disabled:cursor-not-allowed",
+            triggerClassName
+          )}
+        >
+          <span className={cn("truncate", !selected && "text-surface-400")}>
+            {selected ? (
+              <span className="flex items-center gap-2">
+                {selected.icon}
+                {selected.label}
+              </span>
+            ) : placeholder}
+          </span>
+          <ChevronDown size={14} className="text-surface-400 flex-shrink-0" />
+        </RadixDropdown.Trigger>
+
+        <RadixDropdown.Portal>
+          <RadixDropdown.Content
+            align="start"
+            sideOffset={4}
+            className="z-[9999] min-w-[160px] bg-white dark:bg-surface-900 rounded-xl border border-surface-100 dark:border-surface-800 p-1 animate-in fade-in zoom-in-95 duration-100"
+          >
+            {items.map((item) => (
+              <RadixDropdown.Item
+                key={item.id}
+                onClick={() => onChange(item.id)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg cursor-pointer outline-none transition-colors mb-0.5 last:mb-0",
+                  "text-surface-600 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800 hover:text-brand-600 dark:hover:text-brand-400",
+                  value === item.id && "bg-brand-50 dark:bg-brand-950/30 text-brand-600 dark:text-brand-400 font-bold",
+                  item.className
+                )}
+              >
+                {item.icon}
+                <span className="flex-1">{item.label}</span>
+                {value === item.id && <div className="w-1.5 h-1.5 rounded-full bg-brand-500 shadow-sm" />}
+              </RadixDropdown.Item>
+            ))}
+          </RadixDropdown.Content>
+        </RadixDropdown.Portal>
+      </RadixDropdown.Root>
+    </div>
+  );
+};
+
+
+// ─── Select ──────────────────────────────────────────────────────────────────
+export const Select = RadixSelect.Root;
+export const SelectGroup = RadixSelect.Group;
+export const SelectValue = RadixSelect.Value;
+
+export const SelectTrigger = React.forwardRef<
+  React.ElementRef<typeof RadixSelect.Trigger>,
+  React.ComponentPropsWithoutRef<typeof RadixSelect.Trigger>
+>(({ className, children, ...props }, ref) => (
+  <RadixSelect.Trigger
+    ref={ref}
+    className={cn(
+      "flex h-10 w-full items-center justify-between rounded-xl border border-surface-100 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:border-surface-800 dark:bg-surface-900 dark:text-surface-100",
+      className
+    )}
+    {...props}
+  >
+    {children}
+    <RadixSelect.Icon asChild>
+      <ChevronDown className="h-4 w-4 opacity-50" />
+    </RadixSelect.Icon>
+  </RadixSelect.Trigger>
+));
+
+export const SelectContent = React.forwardRef<
+  React.ElementRef<typeof RadixSelect.Content>,
+  React.ComponentPropsWithoutRef<typeof RadixSelect.Content>
+>(({ className, children, position = "popper", ...props }, ref) => (
+  <RadixSelect.Portal>
+    <RadixSelect.Content
+      ref={ref}
+      className={cn(
+        "relative z-[9999] min-w-[8rem] overflow-hidden rounded-xl border border-surface-100 bg-white text-surface-900 shadow-xl animate-in fade-in zoom-in-95 dark:border-surface-800 dark:bg-surface-900 dark:text-surface-100",
+        position === "popper" &&
+        "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
+        className
+      )}
+      position={position}
+      {...props}
+    >
+      <RadixSelect.Viewport
+        className={cn(
+          "p-1",
+          position === "popper" &&
+          "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
+        )}
+      >
+        {children}
+      </RadixSelect.Viewport>
+    </RadixSelect.Content>
+  </RadixSelect.Portal>
+));
+
+export const SelectItem = React.forwardRef<
+  React.ElementRef<typeof RadixSelect.Item>,
+  React.ComponentPropsWithoutRef<typeof RadixSelect.Item>
+>(({ className, children, ...props }, ref) => (
+  <RadixSelect.Item
+    ref={ref}
+    className={cn(
+      "relative flex w-full cursor-default select-none items-center rounded-lg py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-surface-50 focus:text-brand-600 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 dark:focus:bg-surface-800 dark:focus:text-brand-400",
+      className
+    )}
+    {...props}
+  >
+    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+      <RadixSelect.ItemIndicator>
+        <Check className="h-4 w-4" />
+      </RadixSelect.ItemIndicator>
+    </span>
+
+    <RadixSelect.ItemText>{children}</RadixSelect.ItemText>
+  </RadixSelect.Item>
+));
+
+export const SelectSeparator = React.forwardRef<
+  React.ElementRef<typeof RadixSelect.Separator>,
+  React.ComponentPropsWithoutRef<typeof RadixSelect.Separator>
+>(({ className, ...props }, ref) => (
+  <RadixSelect.Separator
+    ref={ref}
+    className={cn("-mx-1 my-1 h-px bg-surface-100 dark:bg-surface-800", className)}
+    {...props}
+  />
+));
+interface Column<T> {
+  key: string;
+  header: string;
+  render?: (row: T) => React.ReactNode;
+  sortable?: boolean;
+  width?: string;
+  align?: 'left' | 'center' | 'right';
+}
+
+interface TableProps<T> {
+  columns: Column<T>[];
+  data: T[];
+  keyExtractor: (row: T) => string;
+  onRowClick?: (row: T) => void;
+  loading?: boolean;
+  emptyMessage?: string;
+  className?: string;
+}
+
+export function Table<T>({
+  columns, data, keyExtractor, onRowClick, loading, emptyMessage = 'No data found', className
+}: TableProps<T>) {
+  const [sortKey, setSortKey] = React.useState<string | null>(null);
+  const [sortDir, setSortDir] = React.useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(key); setSortDir('asc'); }
+  };
+
+  if (loading) {
+    return (
+      <div className={cn('space-y-2', className)}>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="skeleton h-12 rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn('overflow-x-auto', className)}>
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-surface-100 dark:border-surface-800">
+            {columns.map(col => (
+              <th
+                key={col.key}
+                style={{ width: col.width }}
+                className={cn(
+                  'px-4 py-2.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider whitespace-nowrap',
+                  col.align === 'center' && 'text-center',
+                  col.align === 'right' && 'text-right',
+                  !col.align && 'text-left'
+                )}
+              >
+                {col.sortable ? (
+                  <button
+                    onClick={() => handleSort(col.key)}
+                    className="flex items-center gap-1 hover:text-surface-700 dark:hover:text-surface-200 transition-colors"
+                  >
+                    {col.header}
+                    <ChevronsUpDown size={12} />
+                  </button>
+                ) : col.header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-surface-50 dark:divide-surface-800/50">
+          {data.length === 0 ? (
+            <tr>
+              <td colSpan={columns.length} className="px-4 py-12 text-center text-sm text-surface-400">
+                {emptyMessage}
+              </td>
+            </tr>
+          ) : (
+            data.map((row, i) => (
+              <motion.tr
+                key={keyExtractor(row)}
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.03 }}
+                onClick={() => onRowClick?.(row)}
+                className={cn(
+                  'transition-colors',
+                  onRowClick && 'cursor-pointer hover:bg-surface-50 dark:hover:bg-surface-800/50'
+                )}
+              >
+                {columns.map(col => (
+                  <td
+                    key={col.key}
+                    className={cn(
+                      'px-4 py-3 text-sm text-surface-700 dark:text-surface-300',
+                      col.align === 'center' && 'text-center',
+                      col.align === 'right' && 'text-right'
+                    )}
+                  >
+                    {col.render ? col.render(row) : String((row as Record<string, unknown>)[col.key] ?? '')}
+                  </td>
+                ))}
+              </motion.tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─── Pagination ───────────────────────────────────────────────────────────────
+interface PaginationProps {
+  page: number;
+  totalPages: number;
+  onPageChange: (p: number) => void;
+  className?: string;
+}
+
+export const Pagination: React.FC<PaginationProps> = ({ page, totalPages, onPageChange, className }) => {
+  const pages = Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+    if (totalPages <= 5) return i + 1;
+    if (page <= 3) return i + 1;
+    if (page >= totalPages - 2) return totalPages - 4 + i;
+    return page - 2 + i;
+  });
+
+  return (
+    <div className={cn('flex items-center justify-between', className)}>
+      <p className="text-sm text-surface-400">Page {page} of {totalPages}</p>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => onPageChange(page - 1)}
+          disabled={page === 1}
+          className="btn-ghost btn-sm w-8 h-8 p-0 disabled:opacity-40"
+        >
+          <ChevronLeft size={16} />
+        </button>
+        {pages.map(p => (
+          <button
+            key={p}
+            onClick={() => onPageChange(p)}
+            className={cn(
+              'btn-sm w-8 h-8 p-0 text-sm',
+              page === p ? 'btn-primary' : 'btn-ghost'
+            )}
+          >
+            {p}
+          </button>
+        ))}
+        <button
+          onClick={() => onPageChange(page + 1)}
+          disabled={page === totalPages}
+          className="btn-ghost btn-sm w-8 h-8 p-0 disabled:opacity-40"
+        >
+          <ChevronRight size={16} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ─── Progress Bar ─────────────────────────────────────────────────────────────
+interface ProgressBarProps {
+  value: number;
+  max?: number;
+  color?: string;
+  size?: 'sm' | 'md' | 'lg';
+  showLabel?: boolean;
+  className?: string;
+}
+
+export const ProgressBar: React.FC<ProgressBarProps> = ({
+  value, max = 100, color = '#3366ff', size = 'md', showLabel, className
+}) => {
+  const pct = Math.min(Math.max((value / max) * 100, 0), 100);
+  const heights = { sm: 'h-1', md: 'h-1.5', lg: 'h-2.5' };
+
+  return (
+    <div className={cn('w-full', className)}>
+      {showLabel && (
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs text-surface-400">{Math.round(pct)}%</span>
+        </div>
+      )}
+      <div className={cn(heights[size], 'bg-surface-100 dark:bg-surface-800 rounded-full overflow-hidden')}>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
+          className="h-full rounded-full"
+          style={{ backgroundColor: color }}
+        />
+      </div>
+    </div>
+  );
+};
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+export const Skeleton: React.FC<{ className?: string }> = ({ className }) => (
+  <div className={cn('skeleton', className)} />
+);
+
+export const SkeletonCard: React.FC = () => (
+  <div className="card p-4 space-y-3">
+    <Skeleton className="h-4 w-3/4" />
+    <Skeleton className="h-3 w-1/2" />
+    <div className="flex gap-2 pt-1">
+      <Skeleton className="h-6 w-16 rounded-full" />
+      <Skeleton className="h-6 w-20 rounded-full" />
+    </div>
+  </div>
+);
+
+// ─── Badge Status ─────────────────────────────────────────────────────────────
+interface StatusBadgeProps {
+  status: string;
+  label: string;
+  color: string;
+  bg: string;
+  text: string;
+}
+
+export const StatusBadge: React.FC<StatusBadgeProps> = ({ label, color, bg, text }) => (
+  <span className={cn('badge', bg, text)}>
+    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
+    {label}
+  </span>
+);
+
+// ─── Empty State ──────────────────────────────────────────────────────────────
+interface EmptyStateProps {
+  icon: React.ReactNode;
+  title: string;
+  description?: string;
+  action?: React.ReactNode;
+  className?: string;
+}
+
+export const EmptyState: React.FC<EmptyStateProps> = ({
+  icon, title, description, action, className
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    className={cn('flex flex-col items-center justify-center py-16 px-4 text-center', className)}
+  >
+    <div className="w-14 h-14 bg-surface-100 dark:bg-surface-800 rounded-2xl flex items-center justify-center mb-4 text-surface-400">
+      {icon}
+    </div>
+    <h3 className="text-base font-display font-semibold text-surface-700 dark:text-surface-300 mb-1">{title}</h3>
+    {description && <p className="text-sm text-surface-400 max-w-xs mb-4">{description}</p>}
+    {action}
+  </motion.div>
+);
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+interface ToastProps {
+  id: string;
+  title: string;
+  message?: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+  onRemove: (id: string) => void;
+}
+
+const TOAST_STYLES = {
+  success: 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/50 dark:border-emerald-800',
+  error: 'bg-rose-50 border-rose-200 dark:bg-rose-950/50 dark:border-rose-800',
+  info: 'bg-brand-50 border-brand-200 dark:bg-brand-950/50 dark:border-brand-800',
+  warning: 'bg-amber-50 border-amber-200 dark:bg-amber-950/50 dark:border-amber-800',
+};
+
+export const Toast: React.FC<ToastProps> = ({ id, title, message, type, onRemove }) => (
+  <motion.div
+    layout
+    initial={{ opacity: 0, x: 60 }}
+    animate={{ opacity: 1, x: 0 }}
+    exit={{ opacity: 0, x: 60 }}
+    className={cn('p-4 rounded-2xl border shadow-card flex items-start gap-3 min-w-[280px]', TOAST_STYLES[type])}
+  >
+    <div className="flex-1 min-w-0">
+      <p className="text-sm font-semibold text-surface-800 dark:text-surface-200">{title}</p>
+      {message && <p className="text-xs text-surface-500 mt-0.5">{message}</p>}
+    </div>
+    <button onClick={() => onRemove(id)} className="text-surface-400 hover:text-surface-600 flex-shrink-0">
+      <X size={14} />
+    </button>
+  </motion.div>
+);
+
+// ─── Date Picker ──────────────────────────────────────────────────────────────
+interface DatePickerProps {
+  value?: string; // YYYY-MM-DD
+  onChange: (date: string) => void;
+  label?: string;
+  placeholder?: string;
+  minDate?: string;
+  className?: string;
+}
+
+export const DatePicker: React.FC<DatePickerProps> = ({
+  value, onChange, label, placeholder = 'Select date...', minDate, className
+}) => {
+  const [currentMonth, setCurrentMonth] = React.useState(value ? parseISO(value) : new Date());
+
+  const selectedDate = value ? parseISO(value) : null;
+  const min = minDate ? parseISO(minDate) : null;
+
+  const days = React.useMemo(() => {
+    const start = startOfWeek(startOfMonth(currentMonth));
+    const end = endOfWeek(endOfMonth(currentMonth));
+    return eachDayOfInterval({ start, end });
+  }, [currentMonth]);
+
+  return (
+    <div className={cn('flex flex-col gap-1', className)}>
+      {label && <label className="text-[10px] font-bold text-surface-400 uppercase tracking-widest ml-1">{label}</label>}
+      <RadixPopover.Root>
+        <RadixPopover.Trigger asChild>
+          <button className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl border bg-white dark:bg-surface-900 border-surface-100 dark:border-surface-800 hover:border-brand-300 transition-all outline-none text-xs font-semibold">
+            <span className={cn("truncate", !selectedDate && "text-surface-400")}>
+              {selectedDate ? format(selectedDate, 'dd-MM-yyyy') : placeholder}
+            </span>
+            <Calendar size={14} className="text-surface-400 flex-shrink-0" />
+          </button>
+        </RadixPopover.Trigger>
+        <RadixPopover.Portal>
+          <RadixPopover.Content
+            align="start"
+            sideOffset={4}
+            className="z-[9999] bg-white dark:bg-surface-900 rounded-2xl border border-surface-100 dark:border-surface-800 p-3 w-[260px] animate-in fade-in zoom-in-95 duration-100"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-surface-900 dark:text-white uppercase tracking-wider">
+                {format(currentMonth, 'MMMM yyyy')}
+              </span>
+              <div className="flex gap-0.5">
+                <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-1 hover:bg-surface-50 dark:hover:bg-surface-800 rounded-lg transition-colors">
+                  <ChevronLeft size={14} className="text-surface-400" />
+                </button>
+                <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-1 hover:bg-surface-50 dark:hover:bg-surface-800 rounded-lg transition-colors">
+                  <ChevronRight size={14} className="text-surface-400" />
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-7 gap-0.5 mb-1">
+              {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
+                <div key={d} className="text-[9px] font-bold text-surface-400 text-center uppercase tracking-tighter py-1">{d}</div>
+              ))}
+              {days.map((day, i) => {
+                const isSelected = selectedDate && isSameDay(day, selectedDate);
+                const isToday = isSameDay(day, new Date());
+                const disabled = min ? (isSameDay(day, min) ? false : day < min) : false;
+
+                return (
+                  <button
+                    key={i}
+                    disabled={disabled}
+                    onClick={() => {
+                      onChange(format(day, 'yyyy-MM-dd'));
+                    }}
+                    className={cn(
+                      "h-7 w-full text-[10px] rounded-lg flex items-center justify-center transition-all",
+                      !isSameMonth(day, currentMonth) && "text-surface-200 dark:text-surface-700",
+                      isSameMonth(day, currentMonth) && "text-surface-700 dark:text-surface-300",
+                      isToday && !isSelected && "bg-surface-50 dark:bg-surface-800 font-bold",
+                      isSelected && "bg-brand-600 text-white font-bold",
+                      !isSelected && !disabled && "hover:bg-brand-50 dark:hover:bg-brand-950/30 hover:text-brand-600",
+                      disabled && "opacity-20 cursor-not-allowed"
+                    )}
+                  >
+                    {format(day, 'd')}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center justify-between mt-2 pt-2 border-t border-surface-50 dark:border-surface-800">
+              <button
+                onClick={() => {
+                  const today = new Date();
+                  setCurrentMonth(today);
+                  onChange(format(today, 'yyyy-MM-dd'));
+                }}
+                className="text-[9px] font-bold text-brand-600 hover:text-brand-700 transition-colors uppercase tracking-wider"
+              >
+                Today
+              </button>
+              <RadixPopover.Close className="text-[9px] font-bold text-surface-400 hover:text-surface-600 transition-colors uppercase tracking-wider">
+                Close
+              </RadixPopover.Close>
+            </div>
+          </RadixPopover.Content>
+        </RadixPopover.Portal>
+      </RadixPopover.Root>
+    </div>
+  );
+};
+
+// Re-export Calendar icon if needed, but it's used internally

@@ -1,0 +1,682 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Calendar, Flag, Trash2, Zap, MessageSquare, Send, Plus, Lock } from 'lucide-react';
+import { cn, formatDate, generateId, isDueDateOverdue } from '../../utils/helpers';
+import { useAppStore } from '../../context/appStore';
+import { useAuthStore } from '../../context/authStore';
+import { PRIORITY_CONFIG, STATUS_CONFIG } from '../../app/constants';
+import { EmptyState } from '../../components/ui';
+import { QuickTaskModal } from '../../components/QuickTaskModal';
+import { quickTasksService } from '../../services/api';
+import type { Activity, Priority, QuickTask, QuickTaskStatus } from '../../app/types';
+
+type ChecklistItem = { id: string; text: string; done: boolean };
+
+function parseChecklist(value?: string) {
+  const lines = String(value || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (!lines.length) return [{ id: generateId(), text: '', done: false }] as ChecklistItem[];
+
+  return lines.map((line) => ({
+    id: generateId(),
+    done: /^\[(x|X)\]\s*/.test(line),
+    text: line.replace(/^\[(x|X|\s)\]\s*/, '').replace(/^-+\s*/, ''),
+  })) as ChecklistItem[];
+}
+
+function serializeChecklist(items: ChecklistItem[]) {
+  return items
+    .filter((item) => item.text.trim())
+    .map((item) => `[${item.done ? 'x' : ' '}] ${item.text.trim()}`)
+    .join('\n');
+}
+
+type TimelineItem = {
+  id: string;
+  createdAt: string;
+  actorId?: string;
+  title: string;
+  detail?: string;
+};
+
+function summarizeChecklist(value?: string) {
+  const lines = String(value || '')
+    .split('\n')
+    .map((line) => line.replace(/^\[(x|X|\s)\]\s*/, '').trim())
+    .filter(Boolean);
+
+  return lines.join(' | ');
+}
+
+function buildQuickTaskTimeline(task: QuickTask) {
+  const items: TimelineItem[] = [];
+  const seen = new Set<string>();
+  const hasCommentLogs = (task.activityHistory || []).some((activity) => activity.type === 'quick_task_comment_added');
+  const hasAttachmentLogs = (task.activityHistory || []).some((activity) => activity.type === 'quick_task_attachments_added');
+  const hasReviewLogs = (task.activityHistory || []).some((activity) =>
+    activity.type === 'quick_task_review_approved' || activity.type === 'quick_task_review_changes_requested'
+  );
+  const hasCompletionRemarkLogs = (task.activityHistory || []).some((activity) =>
+    activity.type === 'quick_task_completion_remark_updated'
+  );
+
+  const pushItem = (item: TimelineItem) => {
+    const key = `${item.createdAt}:${item.actorId || ''}:${item.title}:${item.detail || ''}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    items.push(item);
+  };
+
+  (task.activityHistory || []).forEach((activity: Activity) => {
+    const metadata = (activity.metadata || {}) as Record<string, unknown>;
+    let title = activity.description;
+    let detail = '';
+
+    if (activity.type === 'quick_task_created') {
+      title = 'Created quick task';
+    } else if (activity.type === 'quick_task_comment_added') {
+      title = 'Added a comment';
+    } else if (activity.type === 'quick_task_review_approved') {
+      title = 'Approved the quick task';
+    } else if (activity.type === 'quick_task_review_changes_requested') {
+      title = 'Requested changes on the quick task';
+    } else if (activity.type === 'quick_task_completion_remark_updated') {
+      title = 'Updated completion remark';
+    }
+
+    if (typeof metadata.content === 'string' && metadata.content.trim()) {
+      detail = metadata.content;
+    } else if (typeof metadata.remark === 'string' && metadata.remark.trim()) {
+      detail = summarizeChecklist(metadata.remark);
+    } else if (typeof metadata.reviewRemark === 'string' && metadata.reviewRemark.trim()) {
+      detail = summarizeChecklist(metadata.reviewRemark);
+    } else if (typeof metadata.rating === 'number') {
+      detail = `Rating ${metadata.rating}/5`;
+    }
+
+    pushItem({
+      id: `log-${activity.id}`,
+      createdAt: activity.createdAt,
+      actorId: activity.userId,
+      title,
+      detail,
+    });
+  });
+
+  if (!hasCommentLogs) {
+    (task.comments || []).forEach((comment) => {
+      pushItem({
+        id: `comment-${comment.id}`,
+        createdAt: comment.createdAt,
+        actorId: comment.authorId,
+        title: 'Added a comment',
+        detail: comment.content,
+      });
+    });
+  }
+
+  if (!hasAttachmentLogs) {
+    (task.attachments || []).forEach((attachment) => {
+      pushItem({
+        id: `attachment-${attachment.id}`,
+        createdAt: attachment.createdAt,
+        actorId: attachment.uploadedBy,
+        title: `Added attachment "${attachment.name}"`,
+        detail: attachment.type,
+      });
+    });
+  }
+
+  if (task.completionReview?.completedAt) {
+    pushItem({
+      id: 'completion',
+      createdAt: task.completionReview.completedAt,
+      actorId: task.completionReview.completedBy,
+      title: 'Marked the quick task as completed',
+      detail: summarizeChecklist(task.completionReview.completionRemark),
+    });
+  } else if (task.completionReview?.completionRemark && !hasCompletionRemarkLogs) {
+    pushItem({
+      id: 'completion-remark',
+      createdAt: task.updatedAt,
+      actorId: task.completionReview.completedBy,
+      title: 'Updated completion remark',
+      detail: summarizeChecklist(task.completionReview.completionRemark),
+    });
+  }
+
+  if (task.completionReview?.reviewedAt && !hasReviewLogs) {
+    pushItem({
+      id: 'review',
+      createdAt: task.completionReview.reviewedAt,
+      actorId: task.completionReview.reviewedBy,
+      title:
+        task.completionReview.reviewStatus === 'approved'
+          ? 'Approved the quick task'
+          : 'Requested changes on the quick task',
+      detail: [
+        task.completionReview.rating ? `Rating ${task.completionReview.rating}/5` : '',
+        summarizeChecklist(task.completionReview.reviewRemark),
+      ].filter(Boolean).join(' | '),
+    });
+  }
+
+  pushItem({
+    id: 'created',
+    createdAt: task.createdAt,
+    actorId: task.reporterId,
+    title: 'Created quick task',
+  });
+
+  return items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export const QuickTaskDetailPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { user } = useAuthStore();
+  const { users, quickTasks, updateQuickTask, deleteQuickTask, setQuickTaskStatus, bootstrap } = useAppStore();
+  const task = quickTasks.find(t => t.id === id);
+  const activitySectionRef = useRef<HTMLDivElement | null>(null);
+  const commentsSectionRef = useRef<HTMLDivElement | null>(null);
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [completionChecklist, setCompletionChecklist] = useState<ChecklistItem[]>(parseChecklist(task?.completionReview?.completionRemark));
+  const [reviewChecklist, setReviewChecklist] = useState<ChecklistItem[]>(parseChecklist(task?.completionReview?.reviewRemark));
+  const [rating, setRating] = useState<number>(task?.completionReview?.rating || 0);
+  const notificationSection = searchParams.get('section');
+
+  if (!task) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <EmptyState
+          icon={<Zap size={28} />}
+          title="Quick task not found"
+          description="It may have been deleted."
+          action={<Link to="/quick-tasks" className="btn-primary">Back to Quick Tasks</Link>}
+        />
+      </div>
+    );
+  }
+
+  const assignees = (task.assigneeIds || [])
+    .map((assigneeId) => users.find((u) => u.id === assigneeId))
+    .filter(Boolean) as typeof users;
+  const reporter = users.find(u => u.id === task.reporterId);
+  const priority = (PRIORITY_CONFIG as any)[task.priority] || PRIORITY_CONFIG.medium;
+  const statusCfg = (STATUS_CONFIG as any)[task.status] || STATUS_CONFIG.todo;
+  const isOverdue = isDueDateOverdue(task.dueDate, task.status);
+  const canEdit = Boolean(user);
+  const isAssignee = Boolean(user && task.assigneeIds.includes(user.id));
+  const isReporter = Boolean(user && task.reporterId === user.id);
+  const roleOk = Boolean(user && ['admin', 'super_admin', 'manager', 'team_leader'].includes(user.role || ''));
+  const canComment = Boolean(user && (isAssignee || isReporter || roleOk));
+  const canReview = Boolean(user && roleOk);
+  const activityItems = buildQuickTaskTimeline(task);
+
+  const syncQuickTask = async (updates: Record<string, unknown>) => {
+    try {
+      const response = await quickTasksService.update(task.id, updates);
+      updateQuickTask(task.id, response.data.data ?? response.data);
+      await bootstrap();
+    } catch {
+      // keep page open
+    }
+  };
+
+  const onChangeStatus = (status: QuickTaskStatus) => { void syncQuickTask({ status }); };
+  const onChangePriority = (p: Priority) => { void syncQuickTask({ priority: p }); };
+  const onChangeDueDate = (dueDate: string) => { void syncQuickTask({ dueDate: dueDate || undefined }); };
+
+  const onDelete = async () => {
+    try {
+      await quickTasksService.delete(task.id);
+      deleteQuickTask(task.id);
+      navigate('/quick-tasks');
+    } catch {
+      // keep the user on the page if delete fails
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!canComment) return;
+    const content = commentText.trim();
+    if (!content) return;
+    try {
+      await quickTasksService.addComment(task.id, { content });
+      await bootstrap();
+      setCommentText('');
+    } catch { }
+  };
+
+  const saveCompletionRemark = async () => {
+    try {
+      await syncQuickTask({ completionRemark: serializeChecklist(completionChecklist) });
+    } catch { }
+  };
+
+  const handleReview = async (action: 'approve' | 'changes_requested') => {
+    try {
+      await quickTasksService.review(task.id, {
+        action,
+        rating: action === 'approve' ? rating : undefined,
+        reviewRemark: serializeChecklist(reviewChecklist).trim() || undefined,
+      });
+      await bootstrap();
+    } catch { }
+  };
+
+  const updateChecklistItem = (
+    setter: React.Dispatch<React.SetStateAction<ChecklistItem[]>>,
+    id: string,
+    updates: Partial<ChecklistItem>
+  ) => {
+    setter((items) => items.map((item) => (item.id === id ? { ...item, ...updates } : item)));
+  };
+
+  const removeChecklistItem = (
+    setter: React.Dispatch<React.SetStateAction<ChecklistItem[]>>,
+    id: string
+  ) => {
+    setter((items) => {
+      const next = items.filter((item) => item.id !== id);
+      return next.length ? next : [{ id: generateId(), text: '', done: false }];
+    });
+  };
+
+  const addChecklistItem = (setter: React.Dispatch<React.SetStateAction<ChecklistItem[]>>) => {
+    setter((items) => [...items, { id: generateId(), text: '', done: false }]);
+  };
+
+  useEffect(() => {
+    if (!notificationSection) return;
+
+    const target =
+      notificationSection === 'comments'
+        ? commentsSectionRef.current
+        : notificationSection === 'activity'
+          ? activitySectionRef.current
+          : null;
+
+    if (!target) return;
+
+    window.requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('section');
+    setSearchParams(nextParams, { replace: true });
+  }, [notificationSection, searchParams, setSearchParams]);
+
+  return (
+    <div className="max-w-full mx-auto">
+      <div className="page-header">
+        <div className="flex items-center gap-3 mb-3">
+          <button onClick={() => navigate(-1)} className="btn-ghost btn-sm">
+            <ArrowLeft size={16} />
+            Back
+          </button>
+          <Link to="/quick-tasks" className="text-sm text-surface-400 hover:text-surface-600">
+            Quick Tasks
+          </Link>
+        </div>
+
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-2">
+              <span className={cn('badge text-[10px]', priority.bg, priority.text)}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: priority.color }} />
+                {priority.label}
+              </span>
+              <span className={cn('badge text-[10px]', statusCfg.bg, statusCfg.text)}>{statusCfg.label}</span>
+              <span className={cn(
+                'badge text-[10px]',
+                task.completionReview?.reviewStatus === 'approved'
+                  ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-300'
+                  : task.completionReview?.reviewStatus === 'changes_requested'
+                    ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-300'
+                    : 'bg-sky-50 text-sky-600 dark:bg-sky-950/30 dark:text-sky-300'
+              )}>
+                {(task.completionReview?.reviewStatus || 'pending').replace('_', ' ')}
+              </span>
+              {task.isPrivate && (
+                <span className="badge text-[10px] bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-300 flex items-center gap-1">
+                  <Lock size={10} />
+                  Private
+                </span>
+              )}
+              {isOverdue && <span className="badge text-[10px] bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-300">Overdue</span>}
+            </div>
+
+            <h1 className="page-title">{task.title}</h1>
+            {task.description && <p className="page-subtitle whitespace-pre-line">{task.description}</p>}
+          </div>
+
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button className="btn-secondary" onClick={() => setEditOpen(true)} disabled={!canEdit}>Edit</button>
+            <button className="btn-ghost text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30" onClick={onDelete} disabled={!canEdit}>
+              <Trash2 size={16} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 space-y-4">
+          <div className="card p-5">
+            <h3 className="font-display font-semibold text-surface-900 dark:text-white mb-3">Details</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="label">Status</label>
+                <div className="flex gap-2 flex-wrap">
+                  {(['todo', 'in_progress', 'done'] as QuickTaskStatus[]).map(status => (
+                    <button
+                      key={status}
+                      onClick={() => onChangeStatus(status)}
+                      className={cn(
+                        'px-3 py-1.5 rounded-xl text-xs font-medium border transition-all',
+                        task.status === status
+                          ? 'bg-brand-600 text-white border-brand-600'
+                          : 'border-surface-200 dark:border-surface-700 text-surface-500 hover:border-surface-300 dark:hover:border-surface-600 hover:text-surface-700 dark:hover:text-surface-300'
+                      )}
+                      disabled={!canEdit}
+                    >
+                      {status === 'todo' ? STATUS_CONFIG.todo.label : status === 'in_progress' ? STATUS_CONFIG.in_progress.label : STATUS_CONFIG.done.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="label">Priority</label>
+                <div className="flex gap-2 flex-wrap">
+                  {(Object.entries(PRIORITY_CONFIG) as [Priority, typeof PRIORITY_CONFIG.low][]).map(([p, cfg]) => (
+                    <button
+                      key={p}
+                      onClick={() => onChangePriority(p)}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all',
+                        task.priority === p
+                          ? `${cfg.bg} ${cfg.text} border-current`
+                          : 'border-surface-200 dark:border-surface-700 text-surface-500 hover:border-surface-300 dark:hover:border-surface-600'
+                      )}
+                      disabled={!canEdit}
+                    >
+                      <Flag size={10} style={{ color: cfg.color }} />
+                      {cfg.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Assignees</label>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {assignees.length ? assignees.slice(0, 3).map((u) => (
+                      <span key={u.id} className="badge text-[11px] bg-surface-100 dark:bg-surface-800 text-surface-700 dark:text-surface-200">{u.name}</span>
+                    )) : <span className="text-xs text-surface-400">Unassigned</span>}
+                    {assignees.length > 3 && <span className="text-xs text-surface-400">+{assignees.length - 3} more</span>}
+                  </div>
+                  <p className="text-xs text-surface-400 mt-1">Update assignees in the Edit modal.</p>
+                </div>
+
+                <div>
+                  <label className="label">Due date</label>
+                  <div className="relative">
+                    <input type="date" value={task.dueDate ?? ''} min={new Date().toISOString().split('T')[0]} onChange={(e) => onChangeDueDate(e.target.value)} className="input pr-10" disabled={!canEdit} />
+                    <Calendar size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {(task.status === 'done' || task.completionReview?.completedAt) && (
+            <div className="card p-5">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3 className="font-display font-semibold text-surface-900 dark:text-white">Completion Remark</h3>
+                <button type="button" onClick={() => void saveCompletionRemark()} className="btn-secondary btn-sm">
+                  Save Remark
+                </button>
+              </div>
+              <div className="space-y-2">
+                {completionChecklist.map((item) => (
+                  <div key={item.id} className="flex items-center gap-2 rounded-xl border border-surface-200 bg-white px-3 py-2 dark:border-surface-700 dark:bg-surface-900">
+                    <input
+                      type="checkbox"
+                      checked={item.done}
+                      onChange={(e) => updateChecklistItem(setCompletionChecklist, item.id, { done: e.target.checked })}
+                      className="rounded"
+                    />
+                    <input
+                      value={item.text}
+                      onChange={(e) => updateChecklistItem(setCompletionChecklist, item.id, { text: e.target.value })}
+                      onBlur={() => void saveCompletionRemark()}
+                      placeholder="Add completion checklist item..."
+                      className="flex-1 bg-transparent text-sm outline-none"
+                    />
+                    <button type="button" onClick={() => removeChecklistItem(setCompletionChecklist, item.id)} className="btn-ghost w-8 h-8 text-surface-400">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+                <button type="button" onClick={() => addChecklistItem(setCompletionChecklist)} className="btn-ghost btn-sm text-xs">
+                  <Plus size={12} />
+                  Add Item
+                </button>
+              </div>
+            </div>
+          )}
+
+          {(task.status === 'done' || task.completionReview?.reviewedAt || task.completionReview?.reviewRemark) && (
+            <div className="card p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-display font-semibold text-surface-900 dark:text-white">Review</h3>
+                <span className={cn(
+                  'badge text-[10px]',
+                  task.completionReview?.reviewStatus === 'approved'
+                    ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-300'
+                    : task.completionReview?.reviewStatus === 'changes_requested'
+                      ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-300'
+                      : 'bg-sky-50 text-sky-600 dark:bg-sky-950/30 dark:text-sky-300'
+                )}>
+                  {(task.completionReview?.reviewStatus || 'pending').replace('_', ' ')}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {reviewChecklist.map((item) => (
+                  <div key={item.id} className="flex items-center gap-2 rounded-xl border border-surface-200 bg-white px-3 py-2 dark:border-surface-700 dark:bg-surface-900">
+                    <input
+                      type="checkbox"
+                      checked={item.done}
+                      onChange={(e) => updateChecklistItem(setReviewChecklist, item.id, { done: e.target.checked })}
+                      className="rounded"
+                    />
+                    <input
+                      value={item.text}
+                      onChange={(e) => updateChecklistItem(setReviewChecklist, item.id, { text: e.target.value })}
+                      placeholder="Add review checklist item..."
+                      className="flex-1 bg-transparent text-sm outline-none"
+                    />
+                    <button type="button" onClick={() => removeChecklistItem(setReviewChecklist, item.id)} className="btn-ghost w-8 h-8 text-surface-400">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+                <button type="button" onClick={() => addChecklistItem(setReviewChecklist)} className="btn-ghost btn-sm text-xs">
+                  <Plus size={12} />
+                  Add Item
+                </button>
+              </div>
+              {canReview && task.status === 'done' && (
+                <div className="mt-3 space-y-3">
+                  <div>
+                    <label className="label">Rating</label>
+                    <div className="flex gap-2">
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setRating(value)}
+                          className={cn(
+                            'flex h-9 w-9 items-center justify-center rounded-xl border text-sm font-medium transition-all',
+                            rating >= value
+                              ? 'border-amber-400 bg-amber-50 text-amber-600 dark:border-amber-500 dark:bg-amber-950/30 dark:text-amber-300'
+                              : 'border-surface-200 text-surface-500 hover:border-surface-300 dark:border-surface-700'
+                          )}
+                        >
+                          {value}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {task.completionReview?.rating ? <p className="text-xs text-surface-400">Current rating: {task.completionReview.rating}/5</p> : null}
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => void handleReview('approve')} className="btn-primary btn-sm" disabled={rating < 1}>Approve</button>
+                    <button type="button" onClick={() => void handleReview('changes_requested')} className="btn-secondary btn-sm">Request Changes</button>
+                  </div>
+                </div>
+              )}
+              {!canReview && (
+                <p className="mt-3 text-xs text-surface-400">
+                  Only admin, manager, or reporting-side leadership can submit the review for this quick task.
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="hidden">
+            <h3 className="font-display font-semibold text-surface-900 dark:text-white mb-2">Activity</h3>
+            <p className="text-sm text-surface-400">Created {task.createdAt ? formatDate(task.createdAt) : '-'} · Updated {task.updatedAt ? formatDate(task.updatedAt) : '-'}</p>
+            {task.completionReview?.completedAt && <p className="text-sm text-surface-400 mt-1">Completed {formatDate(task.completionReview.completedAt)}</p>}
+            {task.completionReview?.reviewedAt && <p className="text-sm text-surface-400 mt-1">Reviewed {formatDate(task.completionReview.reviewedAt)}</p>}
+            {task.completionReview?.rating ? <p className="text-sm text-surface-400 mt-1">Rating {task.completionReview.rating}/5</p> : null}
+          </div>
+          <div ref={activitySectionRef} className="card p-5">
+            <h3 className="font-display font-semibold text-surface-900 dark:text-white mb-3">Activity</h3>
+            <div className="space-y-3">
+              {activityItems.length ? activityItems.map((item) => {
+                const actor = item.actorId ? users.find((entry) => entry.id === item.actorId) : null;
+                const sentence = actor?.name
+                  ? `${actor.name} ${item.title.charAt(0).toLowerCase()}${item.title.slice(1)}`
+                  : item.title;
+
+                return (
+                  <div key={item.id} className="rounded-2xl border border-surface-200 bg-white px-4 py-3 dark:border-surface-700 dark:bg-surface-900">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-surface-900 dark:text-white">{sentence}</p>
+                        {item.detail ? (
+                          <p className="mt-1 text-xs text-surface-500 dark:text-surface-400 whitespace-pre-wrap break-words">
+                            {item.detail}
+                          </p>
+                        ) : null}
+                      </div>
+                      <span className="shrink-0 text-[11px] text-surface-400">
+                        {item.createdAt ? formatDate(item.createdAt) : '-'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }) : (
+                <p className="text-sm text-surface-400">No activity yet.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="card p-5">
+            <h3 className="font-display font-semibold text-surface-900 dark:text-white mb-3">People</h3>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-surface-400">Assignees</span>
+                <span className="text-surface-700 dark:text-surface-300 font-medium truncate">
+                  {assignees.length ? `${assignees.map((u) => u.name).slice(0, 3).join(', ')}${assignees.length > 3 ? ` +${assignees.length - 3}` : ''}` : 'Unassigned'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-surface-400">Reporter</span>
+                <span className="text-surface-700 dark:text-surface-300 font-medium truncate">{reporter?.name ?? '-'}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className={cn('card p-5', isOverdue && 'border-rose-200 dark:border-rose-900/50')}>
+            <h3 className="font-display font-semibold text-surface-900 dark:text-white mb-3">Dates</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-surface-400">Created</span>
+                <span className="font-medium text-surface-700 dark:text-surface-300">
+                  {task.createdAt ? formatDate(task.createdAt) : '—'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-surface-400">Due</span>
+                <span className={cn('font-medium', isOverdue ? 'text-rose-600 dark:text-rose-300' : 'text-surface-700 dark:text-surface-300')}>
+                  {task.dueDate ? formatDate(task.dueDate) : 'No due date'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div ref={commentsSectionRef} className="card p-5">
+            <h3 className="font-display font-semibold text-surface-900 dark:text-white mb-3 flex items-center gap-2">
+              <MessageSquare size={16} />
+              Comments
+            </h3>
+            <div className="space-y-3 mb-4">
+              {task.comments?.length ? task.comments.map((comment) => {
+                const author = users.find((u) => u.id === comment.authorId);
+                return (
+                  <div key={comment.id} className="bg-white dark:bg-surface-800 p-3 rounded-xl border border-surface-100 dark:border-surface-700">
+                    <div className="flex items-center justify-between gap-3 mb-1">
+                      <span className="text-xs font-semibold text-surface-900 dark:text-white truncate">{author?.name ?? 'Unknown'}</span>
+                      <span className="text-[10px] text-surface-400">{comment.createdAt ? formatDate(comment.createdAt) : '-'}</span>
+                    </div>
+                    <p className="text-xs text-surface-600 dark:text-surface-300 whitespace-pre-wrap">{comment.content}</p>
+                  </div>
+                );
+              }) : <p className="text-xs text-surface-400">No comments yet.</p>}
+            </div>
+            {canComment ? (
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <textarea value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Write a comment..." className="input h-auto py-2 pr-10 resize-none" rows={2} />
+                </div>
+                <button onClick={handleAddComment} disabled={!commentText.trim()} className="btn-primary btn-sm w-9 h-9 p-0 flex items-center justify-center disabled:opacity-50" title="Send">
+                  <Send size={16} />
+                </button>
+              </div>
+            ) : <p className="text-xs text-surface-400 mt-1">Only assignees and the reporter can comment.</p>}
+          </div>
+
+          {task.attachments?.length ? (
+            <div className="card p-5">
+              <h3 className="font-display font-semibold text-surface-900 dark:text-white mb-3">Files</h3>
+              <div className="space-y-2">
+                {task.attachments.map((att) => (
+                  <a key={att.id} href={att.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-2 bg-white dark:bg-surface-800 rounded-lg border border-surface-200 dark:border-surface-700 text-xs hover:border-brand-500 transition-colors">
+                    <span className="w-6 h-6 rounded bg-brand-50 dark:bg-brand-900/40 flex items-center justify-center text-brand-600 dark:text-brand-400">F</span>
+                    <span className="truncate flex-1">{att.name}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <QuickTaskModal open={editOpen} onClose={() => setEditOpen(false)} task={task} />
+    </div>
+  );
+};
+
+export default QuickTaskDetailPage;
