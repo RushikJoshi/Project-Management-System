@@ -1,9 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Globe, Mail, Server, Shield } from 'lucide-react';
+import { Globe, Mail, Server, Shield, User, Save, Loader2, Check } from 'lucide-react';
 import { Tabs, TabsContent } from '../../components/ui';
-import { systemSettingsService } from '../../services/api';
+import { useForm } from 'react-hook-form';
+import { useAuthStore } from '../../context/authStore';
+import { ProfilePhotoUpload } from '../../components/ProfilePhotoUpload';
+import { systemSettingsService, usersService } from '../../services/api';
 
 const TAB_ITEMS = [
+  { value: 'profile', label: 'Profile', icon: <User size={14} /> },
   { value: 'general', label: 'General', icon: <Globe size={14} /> },
   { value: 'email', label: 'Email Setup', icon: <Mail size={14} /> },
   { value: 'security', label: 'Security', icon: <Shield size={14} /> },
@@ -220,13 +224,74 @@ const ToggleRow: React.FC<{
   </div>
 );
 
+interface ProfileForm {
+  name: string;
+  email: string;
+  jobTitle: string;
+  department: string;
+  bio: string;
+}
+
 export const SettingsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('general');
+  const { user, updateUser } = useAuthStore();
+  const [activeTab, setActiveTab] = useState('profile');
   const [settings, setSettings] = useState<SystemSettingsState>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string>('');
   const [testingEmail, setTestingEmail] = useState(false);
+
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savedProfile, setSavedProfile] = useState(false);
+
+  const { register: registerProfile, handleSubmit: handleProfile, reset: resetProfile } = useForm<ProfileForm>({
+    defaultValues: {
+      name: user?.name || '',
+      email: user?.email || '',
+      jobTitle: user?.jobTitle || '',
+      department: user?.department || '',
+      bio: user?.bio || '',
+    },
+  });
+
+  useEffect(() => {
+    if (user) {
+      resetProfile({
+        name: user.name || '',
+        email: user.email || '',
+        jobTitle: user.jobTitle || '',
+        department: user.department || '',
+        bio: user.bio || '',
+      });
+    }
+  }, [resetProfile, user]);
+
+  const onSaveProfile = async (data: ProfileForm) => {
+    setSavingProfile(true);
+    setMessage('');
+    try {
+      const res = await usersService.updateMe({
+        name: data.name,
+        jobTitle: data.jobTitle,
+        department: data.department,
+        bio: data.bio,
+      });
+      const updatedUser = res.data?.data;
+      updateUser({
+        name: updatedUser?.name ?? data.name,
+        jobTitle: updatedUser?.jobTitle ?? data.jobTitle,
+        department: updatedUser?.department ?? data.department,
+        bio: updatedUser?.bio ?? data.bio,
+      });
+      setSavedProfile(true);
+      setTimeout(() => setSavedProfile(false), 2000);
+      setMessage('Profile updated successfully.');
+    } catch (error: any) {
+      setMessage(error?.response?.data?.error?.message || 'Failed to update profile.');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   const loadSettings = async () => {
     setLoading(true);
@@ -407,6 +472,10 @@ export const SettingsPage: React.FC = () => {
     return <div className="mx-auto max-w-7xl text-sm text-surface-400">Loading settings...</div>;
   }
 
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="mx-auto max-w-7xl">
       <div className="page-header flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -425,6 +494,77 @@ export const SettingsPage: React.FC = () => {
       {message && <div className="mb-4 rounded-xl bg-surface-50 px-4 py-3 text-sm text-surface-600 dark:bg-surface-800/60">{message}</div>}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} items={TAB_ITEMS} variant="underline" className="min-w-0">
+        <TabsContent value="profile" className="pt-6">
+          <form onSubmit={handleProfile(onSaveProfile)}>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              <div className="card border-surface-100 dark:border-surface-800 shadow-sm overflow-hidden bg-white dark:bg-surface-900">
+                <div className="pt-10 pb-10 px-8 flex flex-col items-center">
+                  {/* Minimal Avatar */}
+                  <div className="mb-6">
+                    <ProfilePhotoUpload size="xl" className="ring-1 ring-surface-100 dark:ring-surface-800 p-1 bg-white dark:bg-surface-900 rounded-full" />
+                  </div>
+                  
+                  {/* Simple Typography */}
+                  <div className="text-center mb-6">
+                    <h2 className="text-2xl font-normal text-surface-900 dark:text-white tracking-tight">{user.name}</h2>
+                    <p className="text-sm font-light text-surface-400 mt-1 uppercase tracking-[0.15em]">{user.role.replace('_', ' ')}</p>
+                  </div>
+
+                  {/* Minimal Metadata */}
+                  <div className="mt-6 flex flex-col gap-3 w-full border-t border-surface-50 dark:border-surface-800/50 pt-6">
+                    <div className="flex items-center justify-between text-[11px] text-surface-400 font-light">
+                      <span className="uppercase tracking-wider">Employee ID</span>
+                      <span className="text-surface-600 dark:text-surface-300">{user.employeeId || 'GEN-001'}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-surface-400 font-light">
+                      <span className="uppercase tracking-wider">Department</span>
+                      <span className="text-surface-600 dark:text-surface-300">{user.department || 'General'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="card p-10 lg:col-span-2 border-surface-100 dark:border-surface-800 shadow-sm bg-white dark:bg-surface-900">
+                <div className="flex flex-col gap-1 mb-10">
+                  <h3 className="text-xl font-normal text-surface-900 dark:text-white">Personal Information</h3>
+                  <p className="text-xs text-surface-400 font-light">Update your profile details and bio below.</p>
+                </div>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="label">Full name</label>
+                      <input {...registerProfile('name', { required: true })} className="input" />
+                    </div>
+                    <div>
+                      <label className="label">Email</label>
+                      <input {...registerProfile('email')} type="email" className="input bg-surface-50 dark:bg-surface-800" readOnly />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="label">Job title</label>
+                      <input {...registerProfile('jobTitle')} placeholder="e.g. Workspace Administrator" className="input" />
+                    </div>
+                    <div>
+                      <label className="label">Department</label>
+                      <input {...registerProfile('department')} placeholder="e.g. Management" className="input" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="label">Bio</label>
+                    <textarea {...registerProfile('bio')} placeholder="Tell your teammates a bit about yourself..." className="input h-auto resize-none py-2" rows={3} />
+                  </div>
+                  <div className="flex justify-end pt-2">
+                    <button type="submit" disabled={savingProfile} className="btn-primary btn-md">
+                      {savingProfile ? <Loader2 size={16} className="animate-spin" /> : savedProfile ? <><Check size={16} /> Saved!</> : <><Save size={15} /> Save changes</>}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+        </TabsContent>
+
         <TabsContent value="general" className="pt-6">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-2">

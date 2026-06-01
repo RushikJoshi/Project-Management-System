@@ -59,7 +59,7 @@ const NotifItem: React.FC<{ notif: Notification; onClose: () => void }> = ({ not
         <p className="text-xs text-surface-400 mt-0.5 leading-relaxed">{notif.message}</p>
         <p className="text-[11px] text-surface-400 mt-1">{formatRelativeTime(notif.createdAt)}</p>
       </div>
-      {sender && <UserAvatar name={sender.name} color={sender.color} size="xs" className="flex-shrink-0 mt-0.5" />}
+      {sender && <UserAvatar name={sender.name} avatar={sender.avatar} color={sender.color} size="xs" className="flex-shrink-0 mt-0.5" />}
     </div>
   );
 };

@@ -564,11 +564,14 @@ export const ProjectActivityTab: React.FC<ProjectActivityTabProps> = ({ projectI
 
                       <div className="flex flex-col items-end gap-3">
                         <div className="flex -space-x-2">
-                          {row.task.assignees.slice(0, 3).map((assignee) => (
-                            <div key={assignee.id} className="rounded-full ring-2 ring-white dark:ring-surface-900">
-                              <UserAvatar name={assignee.name} color={assignee.color} size="xs" />
-                            </div>
-                          ))}
+                          {row.task.assignees.slice(0, 3).map((assignee) => {
+                            const u = users.find(x => x.id === assignee.id);
+                            return (
+                              <div key={assignee.id} className="rounded-full ring-2 ring-white dark:ring-surface-900">
+                                <UserAvatar name={assignee.name} avatar={u?.avatar} color={assignee.color} size="xs" />
+                              </div>
+                            );
+                          })}
                         </div>
                         <button
                           type="button"
@@ -607,12 +610,15 @@ export const ProjectActivityTab: React.FC<ProjectActivityTabProps> = ({ projectI
                                     </div>
                                     <p className="mt-1 text-sm text-surface-700 dark:text-surface-200">{activity.description}</p>
                                   </div>
-                                  {activity.user ? (
-                                    <div className="flex items-center gap-2">
-                                      <UserAvatar name={activity.user.name} color={activity.user.color} size="xs" />
-                                      <span className="hidden text-[11px] font-medium text-surface-500 sm:inline">{activity.user.name}</span>
-                                    </div>
-                                  ) : null}
+                                  {activity.user ? (() => {
+                                    const u = users.find(x => x.id === activity.user?.id);
+                                    return (
+                                      <div className="flex items-center gap-2">
+                                        <UserAvatar name={activity.user.name} avatar={u?.avatar} color={activity.user.color} size="xs" />
+                                        <span className="hidden text-[11px] font-medium text-surface-500 sm:inline">{activity.user.name}</span>
+                                      </div>
+                                    );
+                                  })() : null}
                                 </div>
                               </div>
                             ))}

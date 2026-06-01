@@ -23,6 +23,7 @@ import { Modal } from '../../components/Modal';
 import { ProjectTaskCreateModal, type ProjectTaskCreateValues } from '../../components/ProjectTaskCreateModal';
 import { HighDensityTaskList } from '../../components/HighDensityTaskList';
 import { ProjectPerformanceTab } from '../../components/ProjectPerformanceTab';
+import { EnterpriseTimeline } from '../../components/EnterpriseTimeline';
 
 
 export const ProjectDetailPage: React.FC = () => {
@@ -468,7 +469,6 @@ export const ProjectDetailPage: React.FC = () => {
                 {canEditProject ? <Edit3 size={14} className="opacity-0 group-hover:opacity-100 transition-opacity text-surface-400" /> : null}
               </h1>
             )}
-            <p className="text-[11px] text-surface-400 mt-0">{project.description}</p>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap flex-shrink-0 ml-auto">
@@ -596,7 +596,16 @@ export const ProjectDetailPage: React.FC = () => {
             />
           </div>
         </TabsContent>
-        <TabsContent value="timeline" className="pt-4">
+        <TabsContent value="timeline" className="pt-4 space-y-6">
+          {project.sdlcPlan && project.sdlcPlan.length > 0 && (
+            <EnterpriseTimeline
+              startDate={project.startDate}
+              endDate={project.endDate}
+              sdlcPlan={project.sdlcPlan}
+              projectProgress={project.progress}
+              projectStatus={project.status}
+            />
+          )}
           <ProjectTimelineModule projectId={project.id} />
         </TabsContent>
 

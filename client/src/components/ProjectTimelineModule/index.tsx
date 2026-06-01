@@ -269,18 +269,25 @@ export const ProjectTimelineModule: React.FC<ProjectTimelineModuleProps> = ({ pr
     if (!activeTimeline || !project) return;
 
     const rowsHtml = activeTimeline.phases
-      .flatMap((phase) => phase.tasks.map((task) => `
-        <tr>
-          <td>${phase.name}</td>
-          <td>${task.title}</td>
-          <td>${task.type}</td>
-          <td>${task.startDate}</td>
-          <td>${task.endDate}</td>
-          <td>${task.durationInDays}</td>
-          <td>${task.status}</td>
-          <td>${task.dependencies.join(', ')}</td>
-        </tr>
-      `))
+      .flatMap((phase) => phase.tasks.map((task) => {
+        const assignees = (task.assigneeIds || [])
+          .map((id) => users.find((u) => u.id === id)?.name || id)
+          .join(', ');
+
+        return `
+          <tr>
+            <td>${phase.name}</td>
+            <td>${task.title}</td>
+            <td>${task.type}</td>
+            <td>${assignees || '-'}</td>
+            <td>${task.startDate}</td>
+            <td>${task.endDate}</td>
+            <td>${task.durationInDays}</td>
+            <td>${task.status}</td>
+            <td>${task.dependencies.join(', ')}</td>
+          </tr>
+        `;
+      }))
       .join('');
 
     const workbookHtml = `
@@ -293,6 +300,7 @@ export const ProjectTimelineModule: React.FC<ProjectTimelineModuleProps> = ({ pr
                 <th>Phase</th>
                 <th>Task</th>
                 <th>Type</th>
+                <th>Assignees</th>
                 <th>Start Date</th>
                 <th>End Date</th>
                 <th>Duration (days)</th>
@@ -310,7 +318,7 @@ export const ProjectTimelineModule: React.FC<ProjectTimelineModuleProps> = ({ pr
       new Blob([workbookHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' }),
       `${project.name.replace(/\s+/g, '-').toLowerCase()}-timeline.xls`
     );
-  }, [activeTimeline, downloadBlob, project]);
+  }, [activeTimeline, downloadBlob, project, users]);
 
   const exportTimelineDiagram = useCallback(() => {
     if (!activeTimeline || !project) return;

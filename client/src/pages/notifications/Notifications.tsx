@@ -125,7 +125,7 @@ export const NotificationsPage: React.FC = () => {
                           <p className="text-xs text-surface-400 mt-1.5">{formatRelativeTime(notif.createdAt)}</p>
                         </div>
 
-                        {sender && <UserAvatar name={sender.name} color={sender.color} size="sm" className="flex-shrink-0 mt-0.5" />}
+                        {sender && <UserAvatar name={sender.name} avatar={sender.avatar} color={sender.color} size="sm" className="flex-shrink-0 mt-0.5" />}
                       </motion.div>
                     );
                   })}

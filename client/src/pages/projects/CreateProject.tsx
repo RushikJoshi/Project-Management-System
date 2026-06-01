@@ -29,6 +29,7 @@ import { PROJECT_COLORS } from '../../app/constants';
 import { projectsService } from '../../services/api';
 import { emitErrorToast, emitSuccessToast } from '../../context/toastBus';
 import { UserAvatar } from '../../components/UserAvatar';
+import { EnterpriseTimeline } from '../../components/EnterpriseTimeline';
 
 interface SdlcStage {
   name: string;
@@ -49,13 +50,12 @@ interface ProjectFormData {
 
 const DEPARTMENTS = ['General', 'Development', 'Design', 'Marketing', 'Product'];
 const INITIAL_SDLC: SdlcStage[] = [
-  { name: 'Requirement', duration: '5', enabled: true },
-  { name: 'Analysis', duration: '5', enabled: true },
-  { name: 'Design', duration: '7', enabled: true },
-  { name: 'Development', duration: '20', enabled: true },
-  { name: 'Testing', duration: '10', enabled: true },
-  { name: 'Deployment', duration: '3', enabled: true },
-  { name: 'Maintenance', duration: '0', enabled: false }
+  { name: 'Requirement Analysis', duration: '5', enabled: true },
+  { name: 'Project Planning', duration: '3', enabled: true },
+  { name: 'UI/UX Design', duration: '4', enabled: true },
+  { name: 'Development', duration: '15', enabled: true },
+  { name: 'Testing', duration: '5', enabled: true },
+  { name: 'Deployment', duration: '2', enabled: true }
 ];
 const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP'];
 
@@ -321,10 +321,10 @@ const CreateProjectPage: React.FC = () => {
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-[9px] font-black uppercase tracking-[0.2em] text-surface-300 flex items-center gap-2 italic"><Workflow size={10} className="text-brand-500" /> SDLC Workflow Configuration (7 Stages)</label>
+            <label className="text-[9px] font-black uppercase tracking-[0.2em] text-surface-300 flex items-center gap-2 italic"><Workflow size={10} className="text-brand-500" /> SDLC Workflow Configuration (6 Stages)</label>
             <div className="text-[10px] font-black text-brand-600 uppercase tracking-widest">{totalDays} Total Days</div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {sdlcStages.map((stage, i) => (
               <div key={stage.name} className={cn("p-2 rounded-xl transition-all border flex flex-col gap-2", stage.enabled ? "bg-brand-50/20 dark:bg-brand-950/20 border-brand-500/30" : "bg-surface-50/30 dark:bg-surface-900/20 border-surface-100 dark:border-surface-800 opacity-60")}>
                 <label className="flex items-center gap-2 cursor-pointer group leading-none">
@@ -340,6 +340,17 @@ const CreateProjectPage: React.FC = () => {
               </div>
             ))}
           </div>
+        </div>
+
+        <div className="pt-2">
+          <EnterpriseTimeline
+            startDate={watch('startDate')}
+            sdlcPlan={sdlcStages.map(s => ({
+              name: s.name,
+              durationDays: parseInt(s.duration) || 0,
+              enabled: s.enabled
+            }))}
+          />
         </div>
       </form>
     </div>

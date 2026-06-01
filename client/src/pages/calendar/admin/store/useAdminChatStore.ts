@@ -8,6 +8,7 @@ export interface Participant {
     email: string;
     avatar?: string;
     role: string;
+    userType?: string;
 }
 
 export interface Conversation {

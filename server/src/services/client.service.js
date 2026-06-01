@@ -23,11 +23,22 @@ export async function createClient({ companyId, clientData }) {
 
   const { Client } = await getTenantModels(companyId);
 
-  // 1. Generate unique Client Code — timestamp + random, no DB sequence needed
-  //    Format: CLI-XXXXX (base36 timestamp last 5 chars + 2 random)
-  const ts = Date.now().toString(36).toUpperCase().slice(-5);
-  const rnd = crypto.randomBytes(2).toString('hex').toUpperCase();
-  const clientCode = `CLI-${ts}${rnd}`;
+  // 1. Generate sequential unique Client Code (CLI-001, CLI-002, etc.)
+  const existingClients = await Client.find({ tenantId: companyId }).lean();
+  let maxNum = 0;
+  for (const c of existingClients) {
+    if (c.clientCode && c.clientCode.startsWith('CLI-')) {
+      const numericStr = c.clientCode.replace('CLI-', '').trim();
+      if (/^\d+$/.test(numericStr)) {
+        const numPart = parseInt(numericStr, 10);
+        if (!isNaN(numPart) && numPart > maxNum) {
+          maxNum = numPart;
+        }
+      }
+    }
+  }
+  const nextNum = String(maxNum + 1).padStart(3, '0');
+  const clientCode = `CLI-${nextNum}`;
 
   // 2. Generate unique Client Slug
   const baseSlug = (clientData.companyName || 'client')

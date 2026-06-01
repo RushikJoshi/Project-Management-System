@@ -293,7 +293,7 @@ const RequestPortal: React.FC = () => {
       </div>
 
       {/* Stats Bar */}
-      <div className="flex overflow-x-auto md:grid md:grid-cols-6 gap-3 py-2 scrollbar-thin scrollbar-thumb-surface-200 dark:scrollbar-thumb-surface-700">
+      <div className="flex overflow-x-auto md:grid md:grid-cols-3 lg:grid-cols-6 gap-3 py-3 px-1 scrollbar-thin scrollbar-thumb-surface-200 dark:scrollbar-thumb-surface-700">
         {[
           { label: 'Total Requests', value: analytics?.total || 0, color: 'blue', filter: 'ALL' },
           { label: 'Pending', value: analytics?.open || 0, color: 'amber', filter: 'OPEN' },
@@ -304,11 +304,11 @@ const RequestPortal: React.FC = () => {
         ].map((stat, i) => (
           <div 
             key={i} 
-            className={`flex-shrink-0 w-[130px] md:w-auto bg-white dark:bg-surface-900 p-3 rounded-2xl border border-surface-100 dark:border-surface-800 shadow-sm cursor-pointer hover:border-blue-500 transition-all ${currentFilter === stat.filter ? 'ring-2 ring-blue-500' : ''}`}
+            className={`flex-shrink-0 w-[130px] md:w-auto bg-white dark:bg-surface-900 py-2 px-3 rounded-2xl border border-surface-100 dark:border-surface-800 shadow-sm cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 transition-all ${currentFilter === stat.filter ? 'ring-2 ring-inset ring-blue-500' : ''}`}
             onClick={() => setCurrentFilter(stat.filter)}
           >
-            <p className="text-xs font-bold text-surface-400 uppercase tracking-wider">{stat.label}</p>
-            <p className="text-2xl font-bold text-surface-900 dark:text-white mt-1">{stat.value}</p>
+            <p className="text-[10px] font-extrabold text-surface-400 dark:text-surface-300 uppercase tracking-wider">{stat.label}</p>
+            <p className="text-xl font-bold text-surface-900 dark:text-white mt-0.5">{stat.value}</p>
           </div>
         ))}
       </div>
@@ -454,12 +454,12 @@ const RequestPortal: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-5">
-                        <p className="text-sm font-bold text-surface-900 dark:text-white truncate max-w-[240px] group-hover:text-brand-600 transition-colors">
+                        <p className="text-sm font-bold text-surface-900 dark:text-white truncate max-w-[240px] group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
                           {ticket.title}
                         </p>
                         <div className="flex items-center gap-1.5 mt-1">
-                          <div className="w-1.5 h-1.5 rounded-full bg-surface-300" />
-                          <p className="text-[11px] font-medium text-surface-400 uppercase tracking-wider">{ticket.projectId?.name}</p>
+                          <div className="w-1.5 h-1.5 rounded-full bg-surface-300 dark:bg-surface-600" />
+                          <p className="text-[11px] font-medium text-surface-400 dark:text-surface-500 uppercase tracking-wider">{ticket.projectId?.name}</p>
                         </div>
                       </td>
                       <td className="px-6 py-5 hidden md:table-cell">
@@ -607,7 +607,7 @@ const RequestPortal: React.FC = () => {
                     <h1 className="text-2xl font-black text-surface-900 dark:text-white leading-[1.2] break-words">
                       {selectedTicket.title}
                     </h1>
-                    <div className="p-6 bg-surface-50/50 dark:bg-surface-800/30 rounded-3xl border border-surface-100/50 dark:border-surface-800/50 shadow-inner">
+                    <div className="p-6 bg-surface-50/50 dark:bg-surface-950/40 rounded-3xl border border-surface-100/50 dark:border-surface-800/50 shadow-inner">
                       <p className="text-surface-700 dark:text-surface-300 text-sm leading-relaxed whitespace-pre-wrap break-words">
                         {selectedTicket.description}
                       </p>
@@ -664,7 +664,7 @@ const RequestPortal: React.FC = () => {
                         onClick={() => setActiveTab('messages')}
                         className={cn(
                           "px-8 py-2.5 text-xs font-black uppercase tracking-widest rounded-xl transition-all",
-                          activeTab === 'messages' ? "bg-white dark:bg-surface-700 shadow-md text-brand-600 scale-[1.02]" : "text-surface-500 hover:text-surface-700"
+                          activeTab === 'messages' ? "bg-white dark:bg-surface-700 shadow-md text-brand-600 dark:text-brand-400 scale-[1.02]" : "text-surface-500 hover:text-surface-700 dark:text-surface-400 dark:hover:text-white"
                         )}
                       >
                         Discussions
@@ -673,7 +673,7 @@ const RequestPortal: React.FC = () => {
                         onClick={() => setActiveTab('activity')}
                         className={cn(
                           "px-8 py-2.5 text-xs font-black uppercase tracking-widest rounded-xl transition-all",
-                          activeTab === 'activity' ? "bg-white dark:bg-surface-700 shadow-md text-brand-600 scale-[1.02]" : "text-surface-500 hover:text-surface-700"
+                          activeTab === 'activity' ? "bg-white dark:bg-surface-700 shadow-md text-brand-600 dark:text-brand-400 scale-[1.02]" : "text-surface-500 hover:text-surface-700 dark:text-surface-400 dark:hover:text-white"
                         )}
                       >
                         Timeline
@@ -687,7 +687,7 @@ const RequestPortal: React.FC = () => {
                             "flex gap-5",
                             msg.authorId?.id === user?.id ? "flex-row-reverse" : ""
                           )}>
-                             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-surface-100 to-surface-200 dark:from-surface-800 dark:to-surface-700 flex-shrink-0 flex items-center justify-center font-black text-brand-600 uppercase text-lg shadow-sm">
+                             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-surface-100 to-surface-200 dark:from-surface-800 dark:to-surface-700 flex-shrink-0 flex items-center justify-center font-black text-brand-600 dark:text-brand-400 uppercase text-lg shadow-sm">
                                {msg.authorId?.name?.[0] || 'U'}
                              </div>
                              <div className={cn("max-w-[85%] space-y-2", msg.authorId?.id === user?.id ? "text-right" : "")}>
@@ -740,7 +740,7 @@ const RequestPortal: React.FC = () => {
                         value={comment}
                         onChange={(e) => setComment(e.target.value)}
                         placeholder="Type your message here..." 
-                        className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2 resize-none max-h-40 min-h-[44px] custom-scrollbar font-medium"
+                        className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2 resize-none max-h-40 min-h-[44px] custom-scrollbar font-medium text-surface-900 dark:text-white placeholder:text-surface-400 dark:placeholder:text-surface-500"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
@@ -799,58 +799,58 @@ const RequestPortal: React.FC = () => {
               }}>
                 <div className="space-y-5">
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-surface-500 uppercase tracking-[0.08em]">Project</label>
+                    <label className="text-[11px] font-bold text-surface-500 dark:text-surface-400 uppercase tracking-[0.08em]">Project</label>
                     <select 
                       name="projectId" 
                       required 
-                      className="w-full bg-surface-50/50 dark:bg-surface-800/50 border border-surface-200 dark:border-surface-700 rounded-xl text-sm py-2.5 px-4 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none appearance-none"
+                      className="w-full bg-surface-50/50 dark:bg-surface-800/50 border border-surface-200 dark:border-surface-700 rounded-xl text-sm py-2.5 px-4 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none appearance-none text-surface-900 dark:text-white"
                     >
-                      <option value="">Select Project</option>
+                      <option value="" className="bg-white dark:bg-surface-800 text-surface-900 dark:text-white">Select Project</option>
                       {projects.map(p => (
-                        <option key={p.id || p._id} value={p.id || p._id}>{p.name}</option>
+                        <option key={p.id || p._id} value={p.id || p._id} className="bg-white dark:bg-surface-800 text-surface-900 dark:text-white">{p.name}</option>
                       ))}
                     </select>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-surface-500 uppercase tracking-[0.08em]">Title</label>
+                    <label className="text-[11px] font-bold text-surface-500 dark:text-surface-400 uppercase tracking-[0.08em]">Title</label>
                     <input 
                       name="title" 
                       required 
                       type="text" 
                       placeholder="e.g., UI updates for dashboard" 
-                      className="w-full bg-surface-50/50 dark:bg-surface-800/50 border border-surface-200 dark:border-surface-700 rounded-xl text-sm py-2.5 px-4 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none placeholder:text-surface-400" 
+                      className="w-full bg-surface-50/50 dark:bg-surface-800/50 border border-surface-200 dark:border-surface-700 rounded-xl text-sm py-2.5 px-4 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none text-surface-900 dark:text-white placeholder:text-surface-400 dark:placeholder:text-surface-500" 
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-5">
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-surface-500 uppercase tracking-[0.08em]">Type</label>
+                      <label className="text-[11px] font-bold text-surface-500 dark:text-surface-400 uppercase tracking-[0.08em]">Type</label>
                       <select 
                         name="type" 
-                        className="w-full bg-surface-50/50 dark:bg-surface-800/50 border border-surface-200 dark:border-surface-700 rounded-xl text-sm py-2.5 px-4 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none appearance-none"
+                        className="w-full bg-surface-50/50 dark:bg-surface-800/50 border border-surface-200 dark:border-surface-700 rounded-xl text-sm py-2.5 px-4 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none appearance-none text-surface-900 dark:text-white"
                       >
-                        {TICKET_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                        {TICKET_TYPES.map(t => <option key={t.value} value={t.value} className="bg-white dark:bg-surface-800 text-surface-900 dark:text-white">{t.label}</option>)}
                       </select>
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-surface-500 uppercase tracking-[0.08em]">Priority</label>
+                      <label className="text-[11px] font-bold text-surface-500 dark:text-surface-400 uppercase tracking-[0.08em]">Priority</label>
                       <select 
                         name="priority" 
-                        className="w-full bg-surface-50/50 dark:bg-surface-800/50 border border-surface-200 dark:border-surface-700 rounded-xl text-sm py-2.5 px-4 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none appearance-none"
+                        className="w-full bg-surface-50/50 dark:bg-surface-800/50 border border-surface-200 dark:border-surface-700 rounded-xl text-sm py-2.5 px-4 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none appearance-none text-surface-900 dark:text-white"
                       >
-                        {PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                        {PRIORITIES.map(p => <option key={p.value} value={p.value} className="bg-white dark:bg-surface-800 text-surface-900 dark:text-white">{p.label}</option>)}
                       </select>
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-surface-500 uppercase tracking-[0.08em]">Description</label>
+                    <label className="text-[11px] font-bold text-surface-500 dark:text-surface-400 uppercase tracking-[0.08em]">Description</label>
                     <textarea 
                       name="description" 
                       rows={5} 
                       placeholder="Provide clear details and steps to reproduce if applicable..." 
-                      className="w-full bg-surface-50/50 dark:bg-surface-800/50 border border-surface-200 dark:border-surface-700 rounded-xl text-sm py-3 px-4 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none resize-none placeholder:text-surface-400 leading-relaxed" 
+                      className="w-full bg-surface-50/50 dark:bg-surface-800/50 border border-surface-200 dark:border-surface-700 rounded-xl text-sm py-3 px-4 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none resize-none text-surface-900 dark:text-white placeholder:text-surface-400 dark:placeholder:text-surface-500 leading-relaxed" 
                     />
                   </div>
                 </div>

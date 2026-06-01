@@ -535,3 +535,12 @@ export const clientTeamsService = {
   getList: () => api.get('/client-teams/list'),
   getDetails: (id: string) => api.get(`/client-teams/${id}`),
 };
+
+export const loginActivityService = {
+  getAll: (params?: any) => api.get('/login-activity', { params }),
+  getById: (id: string) => api.get(`/login-activity/${id}`),
+  getByUser: (userId: string, params?: any) => api.get(`/login-activity/user/${userId}`, { params }),
+  getMyActivity: (params?: any) => api.get('/login-activity/my-activity', { params }),
+  getAnalytics: () => api.get('/login-activity/analytics'),
+  forceLogout: (sessionId: string) => api.post(`/login-activity/force-logout/${sessionId}`),
+};

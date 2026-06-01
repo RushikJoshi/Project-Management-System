@@ -333,7 +333,7 @@ export const AdminChatSidebar = () => {
     const [projects, setProjects] = useState<any[]>([]);
     const [search, setSearch] = useState('');
     const [input, setInput] = useState('');
-    const [activeTab, setActiveTab] = useState<'direct' | 'projects'>('direct');
+    const [activeTab, setActiveTab] = useState<'direct' | 'clients' | 'projects'>('direct');
     const [isCreatingGroup, setIsCreatingGroup] = useState(false);
     const [isStartingDirect, setIsStartingDirect] = useState(false);
     const [showGroupOverview, setShowGroupOverview] = useState(false);
@@ -449,6 +449,24 @@ export const AdminChatSidebar = () => {
         return `${other?.name || ''} ${other?.email || ''}`.toLowerCase().includes(search.toLowerCase());
     });
 
+    const teamConversations = useMemo(() =>
+        directConversations.filter((c) => {
+            const other = getOtherParticipant(c, user?.id || '');
+            if (!other) return false;
+            return other.userType !== 'client' && !other.role?.startsWith('CLIENT_');
+        }),
+        [directConversations, user?.id]
+    );
+
+    const clientConversations = useMemo(() =>
+        directConversations.filter((c) => {
+            const other = getOtherParticipant(c, user?.id || '');
+            if (!other) return false;
+            return other.userType === 'client' || other.role?.startsWith('CLIENT_');
+        }),
+        [directConversations, user?.id]
+    );
+
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!input.trim()) return;
@@ -509,6 +527,20 @@ export const AdminChatSidebar = () => {
         [userList, user?.id, search]
     );
 
+    const directTeamMembers = useMemo(() =>
+        availableDirectUsers.filter((item) =>
+            item.userType !== 'client' && !item.role.startsWith('CLIENT_')
+        ),
+        [availableDirectUsers]
+    );
+
+    const directClients = useMemo(() =>
+        availableDirectUsers.filter((item) =>
+            item.userType === 'client' || item.role.startsWith('CLIENT_')
+        ),
+        [availableDirectUsers]
+    );
+
     return (
         <AnimatePresence>
             {isOpen && (
@@ -556,7 +588,7 @@ export const AdminChatSidebar = () => {
                                     </button>
                                 </div>
 
-                                <div className="px-5 pt-4 flex gap-6 border-b border-surface-100 dark:border-surface-800">
+                                <div className="px-5 pt-4 flex gap-4 border-b border-surface-100 dark:border-surface-800">
                                     <button 
                                         onClick={() => setActiveTab('direct')}
                                         className={cn(
@@ -566,6 +598,16 @@ export const AdminChatSidebar = () => {
                                     >
                                         Direct
                                         {activeTab === 'direct' && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-600" />}
+                                    </button>
+                                    <button 
+                                        onClick={() => setActiveTab('clients')}
+                                        className={cn(
+                                            "pb-3 text-sm font-semibold relative transition-colors",
+                                            activeTab === 'clients' ? "text-brand-600" : "text-surface-400 dark:text-surface-500 hover:text-surface-600 dark:hover:text-surface-300"
+                                        )}
+                                    >
+                                        Clients
+                                        {activeTab === 'clients' && <motion.div layoutId="tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-600" />}
                                     </button>
                                     <button 
                                         onClick={() => setActiveTab('projects')}
@@ -584,7 +626,7 @@ export const AdminChatSidebar = () => {
                                         <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-surface-400 dark:text-surface-500 focus-within:text-brand-500" />
                                         <input 
                                             type="text" 
-                                            placeholder={`Search ${activeTab === 'projects' ? 'project teams' : 'direct messages'}...`} 
+                                            placeholder={`Search ${activeTab === 'projects' ? 'project teams' : activeTab === 'clients' ? 'clients' : 'direct messages'}...`} 
                                             value={search}
                                             onChange={e => setSearch(e.target.value)}
                                             className="w-full bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-xl pl-11 pr-4 py-2 text-[14px] text-surface-900 dark:text-white placeholder:text-surface-400 dark:placeholder:text-surface-500 outline-none focus:border-brand-500 focus:bg-white dark:focus:bg-surface-700 transition-all shadow-sm"
@@ -659,9 +701,9 @@ export const AdminChatSidebar = () => {
                                                         <p className="text-sm">No projects found</p>
                                                     </div>
                                                 )
-                                            ) : (
+                                            ) : activeTab === 'clients' ? (
                                                 <>
-                                                    {directConversations.length > 0 && directConversations.map(convo => (
+                                                    {clientConversations.length > 0 && clientConversations.map(convo => (
                                                         <ConversationItem 
                                                             key={convo._id} 
                                                             convo={convo} 
@@ -671,16 +713,78 @@ export const AdminChatSidebar = () => {
                                                         />
                                                     ))}
 
-                                                    {/* All Team Members */}
-                                                    {availableDirectUsers.length > 0 && (
+                                                    {directClients.length > 0 && (
                                                         <div className="mt-1">
-                                                            <div className="px-5 py-2.5 flex items-center justify-between bg-surface-50/60 dark:bg-surface-800/40 border-y border-surface-100 dark:border-surface-700/50">
-                                                                <p className="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-widest">
-                                                                    Team Members ({availableDirectUsers.length})
+                                                            <div className="px-5 py-2.5 flex items-center justify-between bg-indigo-50/40 dark:bg-indigo-950/20 border-y border-indigo-100/50 dark:border-indigo-900/30">
+                                                                <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
+                                                                    Clients ({directClients.length})
                                                                 </p>
                                                             </div>
                                                             <div className="divide-y divide-surface-50 dark:divide-surface-800/50">
-                                                                {availableDirectUsers.map((item) => {
+                                                                {directClients.map((item) => {
+                                                                    const roleColor = 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/30 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800';
+                                                                    return (
+                                                                        <button
+                                                                            key={`client-${item.id}`}
+                                                                            onClick={() => handleStartDirect(item.id)}
+                                                                            className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-surface-50/80 dark:hover:bg-surface-800/50 transition-colors text-left group"
+                                                                        >
+                                                                            <div className="relative w-9 h-9 shrink-0">
+                                                                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-100 to-indigo-50 dark:from-indigo-900/30 dark:to-indigo-950/20 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                                                                                    {item.name[0]?.toUpperCase()}
+                                                                                </div>
+                                                                                {onlineUserIds.has(item.id) && (
+                                                                                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white dark:border-surface-900" />
+                                                                                )}
+                                                                            </div>
+                                                                            <div className="min-w-0 flex-1">
+                                                                                <p className="text-[13px] font-semibold text-surface-900 dark:text-white truncate group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+                                                                                    {item.name}
+                                                                                </p>
+                                                                                <p className="text-[11px] truncate">
+                                                                                    {onlineUserIds.has(item.id)
+                                                                                        ? <span className="text-emerald-500">Online</span>
+                                                                                        : <span className="text-surface-400 dark:text-surface-500">{item.jobTitle || item.email}</span>}
+                                                                                </p>
+                                                                            </div>
+                                                                            <span className={`text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-md border shrink-0 ${roleColor}`}>
+                                                                                {item.role.replace('CLIENT_', '').replace(/_/g, ' ')}
+                                                                            </span>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {directClients.length === 0 && clientConversations.length === 0 && (
+                                                        <div className="flex flex-col items-center justify-center p-12 text-center text-surface-400">
+                                                            <MessageCircle size={32} className="mb-2 opacity-20" />
+                                                            <p className="text-sm">No clients found</p>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    {teamConversations.length > 0 && teamConversations.map(convo => (
+                                                        <ConversationItem 
+                                                            key={convo._id} 
+                                                            convo={convo} 
+                                                            isActive={activeConversationId === convo._id}
+                                                            onClick={() => setActiveConversation(convo._id)}
+                                                            currentUserId={user?.id || ''}
+                                                        />
+                                                    ))}
+
+                                                    {directTeamMembers.length > 0 && (
+                                                        <div className="mt-1">
+                                                            <div className="px-5 py-2.5 flex items-center justify-between bg-surface-50/60 dark:bg-surface-800/40 border-y border-surface-100 dark:border-surface-700/50">
+                                                                <p className="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-widest">
+                                                                    Team Members ({directTeamMembers.length})
+                                                                </p>
+                                                            </div>
+                                                            <div className="divide-y divide-surface-50 dark:divide-surface-800/50">
+                                                                {directTeamMembers.map((item) => {
                                                                     const roleColor =
                                                                         item.role === 'admin' ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400 border-rose-200 dark:border-rose-800' :
                                                                         item.role === 'manager' ? 'bg-violet-50 text-violet-600 dark:bg-violet-950/30 dark:text-violet-400 border-violet-200 dark:border-violet-800' :
@@ -714,14 +818,13 @@ export const AdminChatSidebar = () => {
                                                                                 {item.role.replace(/_/g, ' ')}
                                                                             </span>
                                                                         </button>
-
                                                                     );
                                                                 })}
                                                             </div>
                                                         </div>
                                                     )}
 
-                                                    {availableDirectUsers.length === 0 && directConversations.length === 0 && (
+                                                    {directTeamMembers.length === 0 && teamConversations.length === 0 && (
                                                         <div className="flex flex-col items-center justify-center p-12 text-center text-surface-400">
                                                             <MessageCircle size={32} className="mb-2 opacity-20" />
                                                             <p className="text-sm">No team members found</p>

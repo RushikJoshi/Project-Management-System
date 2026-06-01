@@ -34,6 +34,7 @@ import RequestPortal from '../pages/requests/RequestPortal';
 import { TeamPerformance } from '../pages/teams/TeamPerformance';
 import ClientTeamsPage from '../pages/teams/ClientTeams';
 import MonitoringDashboard from '../pages/monitoring/MonitoringDashboard';
+import { LoginActivity } from '../pages/login-activity/LoginActivity';
 
 
 // Admin pages
@@ -158,6 +159,7 @@ export const router = createBrowserRouter([
       { path: 'tasks', element: <TasksManagement /> },
       { path: 'task-requests', element: <RequireInternal><TaskRequestsPage /></RequireInternal> },
       { path: 'requests', element: <RequestPortal /> },
+      { path: 'login-activity', element: <LoginActivity /> },
       { path: 'monitoring/pending', element: <RequireRole roles={['super_admin', 'admin', 'manager', 'team_leader']}><MonitoringDashboard tab="pending" /></RequireRole> },
       { path: 'monitoring/extensions', element: <RequireRole roles={['super_admin', 'admin', 'manager', 'team_leader']}><MonitoringDashboard tab="extensions" /></RequireRole> },
       { path: 'monitoring/completion-remarks', element: <RequireRole roles={['super_admin', 'admin', 'manager', 'team_leader']}><MonitoringDashboard tab="completion" /></RequireRole> },

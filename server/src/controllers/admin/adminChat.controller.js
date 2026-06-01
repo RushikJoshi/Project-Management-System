@@ -33,7 +33,7 @@ export const getConversations = async (req, res) => {
         const conversations = await AdminConversation.find({
             participants: userId
         })
-        .populate('participants', 'name email avatar role')
+        .populate('participants', 'name email avatar role userType')
         .sort({ updatedAt: -1 });
         
         const results = await Promise.all(conversations.map(async (convo) => {
@@ -199,7 +199,7 @@ export const createGroup = async (req, res) => {
         // Populate participants info
         await AdminConversation.populate(conversation, {
             path: 'participants',
-            select: 'name email avatar role'
+            select: 'name email avatar role userType'
         });
 
         res.status(201).json(conversation);
@@ -228,13 +228,13 @@ export const startConversation = async (req, res) => {
         let conversation = await findDirectConversation(AdminConversation, senderId, participantId);
         
         if (conversation) {
-            await AdminConversation.populate(conversation, { path: 'participants', select: 'name email avatar role' });
+            await AdminConversation.populate(conversation, { path: 'participants', select: 'name email avatar role userType' });
         } else {
             conversation = new AdminConversation({
                 participants: [senderId, participantId]
             });
             await conversation.save();
-            await AdminConversation.populate(conversation, { path: 'participants', select: 'name email avatar role' });
+            await AdminConversation.populate(conversation, { path: 'participants', select: 'name email avatar role userType' });
         }
 
         res.status(200).json(conversation);

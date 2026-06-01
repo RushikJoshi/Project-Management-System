@@ -35,6 +35,7 @@ import { getWorkSessionModel } from '../models/WorkSession.js';
 import { getWorkActivityLogModel } from '../models/WorkActivityLog.js';
 import { getPendingTaskLogModel } from '../models/PendingTaskLog.js';
 import { getDailySummaryModel } from '../models/DailySummary.js';
+import { getLoginActivityLogModel } from '../models/LoginActivityLog.js';
 
 
 const TENANT_DB_PREFIX = process.env.TENANT_DB_PREFIX || 'GT_PMS';
@@ -140,6 +141,7 @@ export async function getTenantModels(companyId = null) {
     WorkActivityLog: getWorkActivityLogModel(conn),
     PendingTaskLog: getPendingTaskLogModel(conn),
     DailySummary: getDailySummaryModel(conn),
+    LoginActivityLog: getLoginActivityLogModel(conn),
   };
 }
 

@@ -168,7 +168,7 @@ const TaskRow = memo(({ task, users, isDetailed, onClick }: TaskRowProps) => {
           <div className="flex items-center gap-2 w-[180px] justify-end flex-shrink-0">
             <div className="flex -space-x-1.5">
               {assignees.slice(0, 3).map((a) => (
-                <UserAvatar key={a.id} name={a.name} color={a.color} size="xs" className="ring-2 ring-white dark:ring-surface-900" />
+                <UserAvatar key={a.id} name={a.name} avatar={a.avatar} color={a.color} size="xs" className="ring-2 ring-white dark:ring-surface-900" />
               ))}
               {assignees.length === 0 && <span className="text-[10px] text-surface-400 font-medium italic">Unassigned</span>}
             </div>

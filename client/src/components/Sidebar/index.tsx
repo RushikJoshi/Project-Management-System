@@ -31,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Quick Tasks', icon: Zap, path: '/quick-tasks' },
   { label: 'Task Requests', icon: Hash, path: '/task-requests' },
   { label: 'Request Portal', icon: Activity, path: '/requests' },
+  { label: 'Login Activity', icon: Shield, path: '/login-activity' },
   { label: 'Calendar', icon: Calendar, path: '/calendar' },
   { 
     label: 'Teams', 
@@ -75,6 +76,7 @@ const SUPER_ADMIN_NAV: NavItem[] = [
   { label: 'Quick Tasks', icon: Zap, path: '/quick-tasks' },
   { label: 'Task Requests', icon: Hash, path: '/task-requests' },
   { label: 'Request Portal', icon: Activity, path: '/requests' },
+  { label: 'Login Activity', icon: Shield, path: '/login-activity' },
   { label: 'Calendar', icon: Calendar, path: '/calendar' },
   { 
     label: 'Teams', 
@@ -104,6 +106,7 @@ const PLATFORM_ADMIN_NAV: NavItem[] = [
   { label: 'Quick Tasks', icon: Zap, path: '/quick-tasks' },
   { label: 'Task Requests', icon: Hash, path: '/task-requests' },
   { label: 'Request Portal', icon: Zap, path: '/requests' },
+  { label: 'Login Activity', icon: Shield, path: '/login-activity' },
   { label: 'Companies', icon: Building2, path: '/companies' },
   { label: 'Users List', icon: UserCircle, path: '/users' },
   {
@@ -352,7 +355,9 @@ export const Sidebar: React.FC = () => {
                               to={sub.path}
                               className={({ isActive }) =>
                                 cn(
-                                  isActive ? 'bg-surface-100 dark:bg-surface-800 text-surface-900 border-l-2 border-brand-500 font-medium' : 'text-surface-600 hover:text-surface-800 hover:bg-surface-50 border-l-2 border-transparent',
+                                  isActive
+                                    ? 'bg-surface-100 dark:bg-surface-800 text-surface-900 dark:text-white border-l-2 border-brand-500 font-medium'
+                                    : 'text-surface-600 hover:text-surface-800 hover:bg-surface-50 dark:text-surface-400 dark:hover:text-white dark:hover:bg-surface-800/50 border-l-2 border-transparent',
                                   'block px-4 py-2 text-xs rounded-r-lg transition-all w-full truncate'
                                 )
                               }
