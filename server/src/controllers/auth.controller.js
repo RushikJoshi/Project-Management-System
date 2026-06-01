@@ -1,4 +1,7 @@
 import * as AuthService from '../services/auth.service.js';
+import * as LoginActivityService from '../services/loginActivity.service.js';
+import { verifyAccessToken } from '../utils/jwt.js';
+import { sha256 } from '../utils/crypto.js';
 
 export async function register(req, res, next) {
   try {
@@ -19,9 +22,22 @@ export async function register(req, res, next) {
 }
 
 export async function login(req, res, next) {
+  const { email, companyCode, employeeCode, password } = req.body;
   try {
-    const { email, companyCode, employeeCode, password } = req.body;
     const result = await AuthService.login({ email, companyCode, employeeCode, password });
+
+    // Log successful login activity
+    const decoded = verifyAccessToken(result.accessToken);
+    const sessionId = sha256(result.refreshToken);
+    await LoginActivityService.logSuccess({
+      req,
+      user: result.user,
+      tenantId: decoded.companyId,
+      workspaceId: decoded.workspaceId,
+      sessionId,
+      tokenId: sessionId,
+      loginType: 'Email Password',
+    });
 
     // Existing response shape is preserved — no breaking change for current frontend
     return res.status(200).json({
@@ -33,6 +49,14 @@ export async function login(req, res, next) {
       },
     });
   } catch (e) {
+    // Log failed login activity
+    await LoginActivityService.logFailure({
+      req,
+      email,
+      companyCode,
+      employeeCode,
+      failureReason: e.message || 'Invalid credentials',
+    });
     return next(e);
   }
 }
@@ -62,6 +86,9 @@ export async function refresh(req, res, next) {
 export async function logout(req, res, next) {
   try {
     const { refreshToken } = req.body ?? {};
+    if (refreshToken) {
+      await LoginActivityService.logLogout({ refreshToken });
+    }
     await AuthService.logout({ refreshToken });
 
     return res.status(200).json({ success: true, data: { ok: true } });
@@ -85,6 +112,20 @@ export async function registerClientUser(req, res, next) {
     const { tenantId, token } = req.params;
     const { password, name } = req.body;
     const result = await AuthService.acceptInviteAndRegister({ tenantId, token, password, name });
+
+    // Log successful login activity for the registering client
+    const decoded = verifyAccessToken(result.accessToken);
+    const sessionId = sha256(result.refreshToken);
+    await LoginActivityService.logSuccess({
+      req,
+      user: result.user,
+      tenantId: decoded.companyId,
+      workspaceId: decoded.workspaceId,
+      sessionId,
+      tokenId: sessionId,
+      loginType: 'Email Password',
+    });
+
     return res.status(201).json({
       success: true,
       data: {

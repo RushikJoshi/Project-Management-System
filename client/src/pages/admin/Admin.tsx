@@ -493,7 +493,7 @@ export const AdminUsersPage: React.FC = () => {
               key: 'name', header: 'User',
               render: (u) => (
                 <div className="flex items-center gap-3">
-                  <UserAvatar name={u.name} color={u.color} size="sm" isOnline={u.isActive} />
+                  <UserAvatar name={u.name} avatar={u.avatar} color={u.color} size="sm" isOnline={u.isActive} />
                   <div>
                     <p className="font-medium text-surface-800 dark:text-surface-200 text-sm">{u.name}</p>
                     <p className="text-xs text-surface-400">{u.email}</p>
@@ -559,7 +559,7 @@ export const AdminUsersPage: React.FC = () => {
         {selectedUser && (
           <div className="p-6 space-y-4">
             <div className="flex items-center gap-3 p-3 bg-surface-50 dark:bg-surface-800 rounded-xl">
-              <UserAvatar name={selectedUser.name} color={selectedUser.color} size="md" />
+              <UserAvatar name={selectedUser.name} avatar={selectedUser.avatar} color={selectedUser.color} size="md" />
               <div>
                 <p className="font-medium text-surface-800 dark:text-surface-200">{selectedUser.name}</p>
                 <p className="text-xs text-surface-400">{selectedUser.email}</p>

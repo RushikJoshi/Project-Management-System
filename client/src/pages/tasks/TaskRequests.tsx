@@ -430,7 +430,7 @@ const CompletionReviewTab: React.FC<{ projectId?: string }> = ({ projectId }) =>
             className={cn(
               'group rounded-xl border p-4 text-left transition-all duration-200',
               statusFilter === key
-                ? 'border-brand-500 bg-white shadow-sm ring-1 ring-brand-500/10'
+                ? 'border-brand-500 bg-white dark:bg-surface-800 shadow-sm ring-1 ring-brand-500/10'
                 : 'border-surface-100 bg-white dark:border-surface-800 dark:bg-surface-900 hover:border-surface-200'
             )}
           >
@@ -893,7 +893,7 @@ const TaskRequestsPage: React.FC = () => {
                 className={cn(
                   'group rounded-xl border p-4 text-left transition-all duration-200',
                   statusFilter === key
-                    ? 'border-brand-500 bg-white shadow-sm ring-1 ring-brand-500/10'
+                    ? 'border-brand-500 bg-white dark:bg-surface-800 shadow-sm ring-1 ring-brand-500/10'
                     : 'border-surface-100 bg-white dark:border-surface-800 dark:bg-surface-900 hover:border-surface-200'
                 )}
               >

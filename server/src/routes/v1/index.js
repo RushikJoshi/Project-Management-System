@@ -27,6 +27,7 @@ import clientDashboardRoutes from './modules/clientDashboard.routes.js';
 import clientTeamsRoutes from './modules/clientTeams.routes.js';
 import workSessionsRoutes from './modules/workSessions.routes.js';
 import monitoringRoutes from './modules/monitoring.routes.js';
+import loginActivityRoutes from './modules/loginActivity.routes.js';
 
 import { requireAuth } from '../../middleware/auth.middleware.js';
 import * as TimelineController from '../../controllers/timeline.controller.js';
@@ -61,6 +62,7 @@ router.use('/client-dashboard', clientDashboardRoutes);
 router.use('/client-teams', clientTeamsRoutes);
 router.use('/work-sessions', workSessionsRoutes);
 router.use('/monitoring', monitoringRoutes);
+router.use('/login-activity', loginActivityRoutes);
 router.patch('/task/:id', requireAuth, TimelineController.patchTaskTimeline);
 router.post('/dependency', requireAuth, TimelineController.createDependency);
 

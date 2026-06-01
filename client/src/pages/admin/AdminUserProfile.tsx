@@ -285,7 +285,7 @@ export const AdminUserProfilePage: React.FC = () => {
             <ArrowLeft size={16} />
           </button>
           <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-            <UserAvatar name={user.name} color={user.color} size="lg" isOnline={user.isActive} />
+            <UserAvatar name={user.name} avatar={user.avatar} color={user.color} size="lg" isOnline={user.isActive} />
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="page-title">{user.name}</h1>

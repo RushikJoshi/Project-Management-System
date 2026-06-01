@@ -209,7 +209,7 @@ export const UsersPage: React.FC = () => {
               key: 'name', header: 'User',
               render: (u: any) => (
                 <div className="flex items-center gap-3">
-                  <UserAvatar name={u.name} color={u.color} size="sm" isOnline={u.isActive} />
+                  <UserAvatar name={u.name} avatar={u.avatar} color={u.color} size="sm" isOnline={u.isActive} />
                   <div>
                     <p className="font-medium text-surface-900 dark:text-white text-sm">{u.name}</p>
                     <p className="text-xs text-surface-400">{u.email}</p>
