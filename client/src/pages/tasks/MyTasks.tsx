@@ -12,6 +12,7 @@ import { TaskCard } from '../../components/TaskCard';
 import { TaskModal } from '../../components/TaskModal';
 import { EmptyState } from '../../components/ui';
 import type { Task, TaskStatus } from '../../app/types';
+import { PaginationControls } from '../../components/PaginationControls';
 
 const FILTERS: { value: TaskStatus | 'all' | 'overdue'; label: string; color?: string }[] = [
   { value: 'all', label: 'All' },
@@ -64,6 +65,21 @@ export const MyTasksPage: React.FC = () => {
   const overdueCount = myTasks.filter(t => isDueDateOverdue(t.dueDate, t.status)).length
     + myQuickTasks.filter(t => isDueDateOverdue(t.dueDate, t.status)).length;
   const doneCount = myTasks.filter(t => t.status === 'done').length;
+
+  const tasksPerPage = 10;
+  const [quickPage, setQuickPage] = useState(1);
+  const [projectPage, setProjectPage] = useState(1);
+
+  const quickTasksPageCount = Math.max(1, Math.ceil(myQuickTasks.length / tasksPerPage));
+  const projectTasksPageCount = Math.max(1, Math.ceil(sorted.length / tasksPerPage));
+
+  const paginatedQuickTasks = myQuickTasks.slice((quickPage - 1) * tasksPerPage, quickPage * tasksPerPage);
+  const paginatedProjectTasks = sorted.slice((projectPage - 1) * tasksPerPage, projectPage * tasksPerPage);
+
+  React.useEffect(() => {
+    setQuickPage(1);
+    setProjectPage(1);
+  }, [filter]);
 
   React.useEffect(() => {
     const next = filter === 'all' ? null : filter;
@@ -231,7 +247,7 @@ export const MyTasksPage: React.FC = () => {
                 <span className="text-xs text-surface-400">{myQuickTasks.length} assigned</span>
               </div>
               <div className="space-y-2">
-                {myQuickTasks.map((qt, i) => {
+                {paginatedQuickTasks.map((qt, i) => {
                   const isOverdue = isDueDateOverdue(qt.dueDate, qt.status);
                   const priority = PRIORITY_CONFIG[qt.priority];
                   const statusCfg = qt.status === 'todo' ? STATUS_CONFIG.todo : qt.status === 'in_progress' ? STATUS_CONFIG.in_progress : STATUS_CONFIG.done;
@@ -281,6 +297,18 @@ export const MyTasksPage: React.FC = () => {
                     </motion.div>
                   );
                 })}
+
+                {myQuickTasks.length > tasksPerPage && (
+                  <div className="card p-4 bg-gray-50/30 dark:bg-surface-950/20 mt-3 border border-surface-200 dark:border-surface-800">
+                    <PaginationControls
+                      currentPage={quickPage}
+                      totalPages={quickTasksPageCount}
+                      totalItems={myQuickTasks.length}
+                      itemsPerPage={tasksPerPage}
+                      onPageChange={setQuickPage}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -291,7 +319,7 @@ export const MyTasksPage: React.FC = () => {
               <span className="text-xs text-surface-400">{sorted.length} shown</span>
             </div>
             <div className="space-y-2">
-              {sorted.map((task, i) => {
+              {paginatedProjectTasks.map((task, i) => {
                 const project = projects.find(p => p.id === task.projectId);
                 return (
                   <motion.div
@@ -334,6 +362,18 @@ export const MyTasksPage: React.FC = () => {
                   </motion.div>
                 );
               })}
+
+              {sorted.length > tasksPerPage && (
+                <div className="card p-4 bg-gray-50/30 dark:bg-surface-950/20 mt-3 border border-surface-200 dark:border-surface-800">
+                  <PaginationControls
+                    currentPage={projectPage}
+                    totalPages={projectTasksPageCount}
+                    totalItems={sorted.length}
+                    itemsPerPage={tasksPerPage}
+                    onPageChange={setProjectPage}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -800,8 +800,8 @@ export const TasksManagement: React.FC = () => {
                           <tbody className="divide-y divide-gray-50 dark:divide-surface-800">
                             {loading ? (
                               <tr><td colSpan={7} className="px-5 py-10 text-center text-gray-400">Loading your tasks...</td></tr>
-                            ) : projectTasks.length > 0 ? (
-                              projectTasks.map((task, idx) => (
+                            ) : filteredProjectTasks.length > 0 ? (
+                              paginatedProjectTasks.map((task, idx) => (
                                 <TaskRowComponent key={task.id || idx} task={task} onClick={() => setSelectedTask(task)} />
                               ))
                             ) : (
@@ -809,6 +809,19 @@ export const TasksManagement: React.FC = () => {
                             )}
                           </tbody>
                         </table>
+
+                        {/* Pagination Controls */}
+                        {filteredProjectTasks.length > tasksPerPage && (
+                          <div className="px-5 py-4 border-t border-gray-100 dark:border-surface-800 bg-gray-50/30 dark:bg-surface-950/20">
+                            <PaginationControls
+                              currentPage={projectsPage}
+                              totalPages={projectTasksPageCount}
+                              totalItems={filteredProjectTasks.length}
+                              itemsPerPage={tasksPerPage}
+                              onPageChange={setProjectsPage}
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

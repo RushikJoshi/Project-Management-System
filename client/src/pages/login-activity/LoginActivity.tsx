@@ -37,7 +37,7 @@ export const LoginActivity: React.FC = () => {
   
   // Pagination
   const [page, setPage] = useState(1);
-  const [limit] = useState(15);
+  const [limit] = useState(5);
   const [totalPages, setTotalPages] = useState(1);
   const [totalLogs, setTotalLogs] = useState(0);
 
@@ -196,19 +196,9 @@ export const LoginActivity: React.FC = () => {
   const barColors = ['#3b82f6', '#6366f1', '#10b981'];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Title Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-white flex items-center gap-2">
-            <Shield className="text-brand-600 dark:text-brand-400" size={26} />
-            Security & Login Activity Monitor
-          </h1>
-          <p className="text-xs font-medium text-surface-500 dark:text-surface-400 mt-1">
-            Enterprise security audit portal for access session tracking, geo-IP monitoring, and brute-force mitigation.
-          </p>
-        </div>
-
+      <div className="flex items-center justify-end gap-4">
         <div className="flex items-center gap-3">
           <button 
             onClick={fetchData}
@@ -220,9 +210,9 @@ export const LoginActivity: React.FC = () => {
           
           <button 
             onClick={handleExportCSV}
-            className="flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-bold transition-all shadow-md active:scale-98"
+            className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-medium text-xs transition-all shadow-md active:scale-98"
           >
-            <Download size={18} />
+            <Download size={16} />
             Export Logs (CSV)
           </button>
         </div>
@@ -232,17 +222,17 @@ export const LoginActivity: React.FC = () => {
       {analytics && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Total Logs', value: analytics.metrics.totalLogins, icon: Globe, color: 'blue', desc: 'Total authentication requests' },
-            { label: 'Failed Attempts', value: analytics.metrics.failedLogins, icon: ShieldAlert, color: 'rose', desc: 'Blocked invalid attempts' },
-            { label: 'Active Sessions', value: analytics.metrics.activeSessions, icon: Activity, color: 'emerald', desc: 'Currently connected devices' },
-            { label: 'Suspicious Activities', value: analytics.metrics.suspiciousActivities, icon: AlertOctagon, color: 'amber', desc: 'Brute-force/unknown browser triggers' },
+            { label: 'Total Logins', value: analytics.metrics.totalLogins, icon: Globe, color: 'blue', desc: 'Total times logged in' },
+            { label: 'Failed Logins', value: analytics.metrics.failedLogins, icon: ShieldAlert, color: 'rose', desc: 'Incorrect password or email attempts' },
+            { label: 'Active Devices', value: analytics.metrics.activeSessions, icon: Activity, color: 'emerald', desc: 'Devices currently logged in' },
+            { label: 'Security Alerts', value: analytics.metrics.suspiciousActivities, icon: AlertOctagon, color: 'amber', desc: 'Unusual login locations or methods' },
           ].map((card, i) => {
             const Icon = card.icon;
             return (
               <div key={i} className="bg-white dark:bg-surface-900 p-4 rounded-3xl border border-surface-100 dark:border-surface-800 shadow-sm flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] font-black text-surface-400 uppercase tracking-widest">{card.label}</p>
-                  <p className="text-3xl font-black text-surface-900 dark:text-white mt-1.5">{card.value}</p>
+                  <p className="text-[10px] font-semibold text-surface-400 uppercase tracking-wider">{card.label}</p>
+                  <p className="text-2xl font-bold text-surface-900 dark:text-white mt-1.5">{card.value}</p>
                   <p className="text-[10px] font-medium text-surface-400 mt-1 truncate">{card.desc}</p>
                 </div>
                 <div className={cn(
@@ -262,11 +252,11 @@ export const LoginActivity: React.FC = () => {
 
       {/* Advanced analytics charts (Recharts) */}
       {analytics && analytics.trends?.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Linear Login Trend Chart */}
-          <div className="lg:col-span-2 bg-white dark:bg-surface-900 p-5 rounded-3xl border border-surface-100 dark:border-surface-800 shadow-sm">
-            <h2 className="text-sm font-black text-surface-900 dark:text-white uppercase tracking-wider mb-4">Login Audit Timeline Trends</h2>
-            <div className="h-64 w-full">
+          <div className="lg:col-span-2 bg-white dark:bg-surface-900 p-4 rounded-3xl border border-surface-100 dark:border-surface-800 shadow-sm">
+            <h2 className="text-xs font-semibold text-surface-700 dark:text-surface-300 uppercase tracking-wide mb-3">Login Activity Over Time</h2>
+            <div className="h-40 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={analytics.trends.filter((t: any) => t.status === 'Success' || t.status === 'Failed')}>
                   <defs>
@@ -279,16 +269,16 @@ export const LoginActivity: React.FC = () => {
                   <XAxis dataKey="date" className="text-[10px] text-surface-400 font-semibold" />
                   <YAxis className="text-[10px] text-surface-400 font-semibold" />
                   <Tooltip contentStyle={{ borderRadius: '16px', background: '#fff', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }} />
-                  <Area type="monotone" dataKey="count" stroke="#10b981" fillOpacity={1} fill="url(#colorSuccess)" name="Authentications" strokeWidth={3} />
+                  <Area type="monotone" dataKey="count" stroke="#10b981" fillOpacity={1} fill="url(#colorSuccess)" name="Logins" strokeWidth={3} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
 
           {/* Bar Chart Device Distribution */}
-          <div className="bg-white dark:bg-surface-900 p-5 rounded-3xl border border-surface-100 dark:border-surface-800 shadow-sm flex flex-col">
-            <h2 className="text-sm font-black text-surface-900 dark:text-white uppercase tracking-wider mb-4">Authentication Device Metrics</h2>
-            <div className="h-48 w-full flex-1">
+          <div className="bg-white dark:bg-surface-900 p-4 rounded-3xl border border-surface-100 dark:border-surface-800 shadow-sm flex flex-col">
+            <h2 className="text-xs font-semibold text-surface-700 dark:text-surface-300 uppercase tracking-wide mb-3">Devices Used to Log In</h2>
+            <div className="h-36 w-full flex-1">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={analytics.devices}>
                   <XAxis dataKey="device" className="text-[10px] text-surface-400 font-semibold" />
@@ -301,11 +291,11 @@ export const LoginActivity: React.FC = () => {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <div className="flex items-center justify-around mt-4 pt-3 border-t border-surface-50 dark:border-surface-800">
+            <div className="flex items-center justify-around mt-3 pt-2 border-t border-surface-50 dark:border-surface-800">
               {analytics.devices.map((d: any, index: number) => (
                 <div key={index} className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: barColors[index % barColors.length] }} />
-                  <span className="text-xs font-bold text-surface-600 dark:text-surface-400">{d.device}: {d.count}</span>
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: barColors[index % barColors.length] }} />
+                  <span className="text-[11px] font-medium text-surface-600 dark:text-surface-400">{d.device}: {d.count}</span>
                 </div>
               ))}
             </div>
@@ -323,17 +313,17 @@ export const LoginActivity: React.FC = () => {
           )}
         >
           <Globe size={14} />
-          Full Audit History
+          All Login Records
         </button>
         <button 
           onClick={() => { setActiveTab('active'); setPage(1); }}
           className={cn(
-            "px-6 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all flex items-center gap-2",
+            "px-6 py-2 text-xs font-semibold uppercase tracking-wider rounded-xl transition-all flex items-center gap-2",
             activeTab === 'active' ? "bg-white dark:bg-surface-700 shadow-md text-brand-600 dark:text-brand-400 scale-[1.02]" : "text-surface-500 hover:text-surface-700 dark:text-surface-400 dark:hover:text-white"
           )}
         >
           <Activity size={14} className="animate-pulse" />
-          Active Live Sessions
+          Currently Active Devices
         </button>
       </div>
 
@@ -348,7 +338,7 @@ export const LoginActivity: React.FC = () => {
                 <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-surface-400" />
                 <input 
                   type="text"
-                  placeholder="Search user name, email, IP, browser, location..."
+                  placeholder="Search by name, email, IP, device or country..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-full bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 pl-11 pr-4 py-2.5 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 dark:text-white placeholder:text-surface-400 transition-all font-medium shadow-sm"
@@ -378,7 +368,7 @@ export const LoginActivity: React.FC = () => {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {/* Status */}
               <div className="space-y-1">
-                <label className="text-[9px] font-black text-surface-400 uppercase tracking-widest pl-1">Status</label>
+                <label className="text-[9px] font-semibold text-surface-400 uppercase tracking-wider pl-1">Status</label>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
@@ -391,7 +381,7 @@ export const LoginActivity: React.FC = () => {
 
               {/* Login Type */}
               <div className="space-y-1">
-                <label className="text-[9px] font-black text-surface-400 uppercase tracking-widest pl-1">Login Type</label>
+                <label className="text-[9px] font-semibold text-surface-400 uppercase tracking-wider pl-1">Login Method</label>
                 <select
                   value={loginType}
                   onChange={(e) => setLoginType(e.target.value)}
@@ -404,7 +394,7 @@ export const LoginActivity: React.FC = () => {
 
               {/* Device */}
               <div className="space-y-1">
-                <label className="text-[9px] font-black text-surface-400 uppercase tracking-widest pl-1">Device</label>
+                <label className="text-[9px] font-semibold text-surface-400 uppercase tracking-wider pl-1">Device</label>
                 <select
                   value={deviceType}
                   onChange={(e) => setDeviceType(e.target.value)}
@@ -417,21 +407,21 @@ export const LoginActivity: React.FC = () => {
 
               {/* Suspicious flag */}
               <div className="space-y-1">
-                <label className="text-[9px] font-black text-surface-400 uppercase tracking-widest pl-1">Security Flags</label>
+                <label className="text-[9px] font-semibold text-surface-400 uppercase tracking-wider pl-1">Filter by Security</label>
                 <select
                   value={isSuspicious}
                   onChange={(e) => setIsSuspicious(e.target.value)}
                   className="w-full bg-white dark:bg-surface-800 border border-surface-150 dark:border-surface-700 rounded-xl text-xs py-2 px-3 outline-none focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500 dark:text-white font-semibold transition-all shadow-sm"
                 >
                   <option value="">Security Level</option>
-                  <option value="true">⚠️ Suspicious Only</option>
-                  <option value="false">🛡️ Secure Only</option>
+                  <option value="true">⚠️ Show Alerts Only</option>
+                  <option value="false">🛡️ Show Safe Logins Only</option>
                 </select>
               </div>
 
               {/* Date Start */}
               <div className="space-y-1">
-                <label className="text-[9px] font-black text-surface-400 uppercase tracking-widest pl-1">From Date</label>
+                <label className="text-[9px] font-semibold text-surface-400 uppercase tracking-wider pl-1">From Date</label>
                 <input
                   type="date"
                   value={startDate}
@@ -442,7 +432,7 @@ export const LoginActivity: React.FC = () => {
 
               {/* Date End */}
               <div className="space-y-1">
-                <label className="text-[9px] font-black text-surface-400 uppercase tracking-widest pl-1">To Date</label>
+                <label className="text-[9px] font-semibold text-surface-400 uppercase tracking-wider pl-1">To Date</label>
                 <input
                   type="date"
                   value={endDate}
@@ -459,31 +449,31 @@ export const LoginActivity: React.FC = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-surface-50/50 dark:bg-surface-800/50 border-b border-surface-100 dark:border-surface-800">
-                <th className="px-6 py-4 text-xs font-bold text-surface-400 dark:text-surface-300 uppercase tracking-wider">User</th>
-                <th className="px-6 py-4 text-xs font-bold text-surface-400 dark:text-surface-300 uppercase tracking-wider">Access Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-surface-400 dark:text-surface-300 uppercase tracking-wider">Device & Browser</th>
-                <th className="px-6 py-4 text-xs font-bold text-surface-400 dark:text-surface-300 uppercase tracking-wider">IP & Location</th>
-                <th className="px-6 py-4 text-xs font-bold text-surface-400 dark:text-surface-300 uppercase tracking-wider">Session Time</th>
-                <th className="px-6 py-4 text-xs font-bold text-surface-400 dark:text-surface-300 uppercase tracking-wider text-right">Audit</th>
+                <th className="px-6 py-3.5 text-xs font-bold text-surface-400 dark:text-surface-300 uppercase tracking-wider">User</th>
+                <th className="px-6 py-3.5 text-xs font-bold text-surface-400 dark:text-surface-300 uppercase tracking-wider">Login Status</th>
+                <th className="px-6 py-3.5 text-xs font-bold text-surface-400 dark:text-surface-300 uppercase tracking-wider">Device</th>
+                <th className="px-6 py-3.5 text-xs font-bold text-surface-400 dark:text-surface-300 uppercase tracking-wider">Location (IP)</th>
+                <th className="px-6 py-3.5 text-xs font-bold text-surface-400 dark:text-surface-300 uppercase tracking-wider">Time</th>
+                <th className="px-6 py-3.5 text-xs font-bold text-surface-400 dark:text-surface-300 uppercase tracking-wider text-right">Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-50 dark:divide-surface-800/60">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="p-20 text-center">
+                  <td colSpan={6} className="p-12 text-center">
                     <div className="w-10 h-10 border-4 border-brand-100 border-t-brand-600 rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-surface-500 dark:text-surface-400 font-bold animate-pulse text-sm">Querying activity logs...</p>
+                    <p className="text-surface-500 dark:text-surface-400 font-semibold animate-pulse text-sm">Loading login records...</p>
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-20 text-center">
+                  <td colSpan={6} className="p-12 text-center">
                     <div className="w-16 h-16 bg-surface-50 dark:bg-surface-800/40 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Shield className="text-surface-300 dark:text-surface-600" size={32} />
                     </div>
-                    <h3 className="text-lg font-bold text-surface-900 dark:text-white">No activity records found</h3>
+                    <h3 className="text-base font-semibold text-surface-900 dark:text-white">No login records found</h3>
                     <p className="text-xs text-surface-500 dark:text-surface-400 mt-1 max-w-sm mx-auto">
-                      Adjust your query filters or search terms and refresh the monitor.
+                      Try changing your search filters above and refresh the list.
                     </p>
                   </td>
                 </tr>
@@ -513,14 +503,14 @@ export const LoginActivity: React.FC = () => {
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1.5 items-start">
                         <span className={cn(
-                          "inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-sm",
+                          "inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[10px] font-semibold uppercase tracking-wider shadow-sm",
                           getStatusBadgeClass(log.status)
                         )}>
                           {log.status}
                         </span>
                         {log.isSuspicious && (
                           <span className="inline-flex items-center gap-1 text-[9px] font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/20 dark:text-rose-450 px-2 py-0.5 rounded-md">
-                            ⚠️ Suspicious Action
+                            ⚠️ Unusual Action
                           </span>
                         )}
                       </div>
@@ -641,12 +631,12 @@ export const LoginActivity: React.FC = () => {
                   <button onClick={() => setSelectedLog(null)} className="p-2 hover:bg-surface-100 dark:hover:bg-surface-800 rounded-xl transition-all border border-transparent hover:border-surface-150 dark:hover:border-surface-700">
                     <X size={18} className="text-surface-500" />
                   </button>
-                  <h2 className="text-base font-black text-surface-900 dark:text-white uppercase tracking-wider">Log Detail Profile</h2>
+                  <h2 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">Login Details</h2>
                 </div>
                 {selectedLog.status === 'Success' && selectedLog.sessionId && (
                   <button
                     onClick={() => handleForceLogout(selectedLog.sessionId)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-[10px] font-black uppercase rounded-lg transition-colors border border-rose-100 dark:border-rose-900/30 shadow-sm"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-450 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-[10px] font-semibold uppercase rounded-lg transition-colors border border-rose-100 dark:border-rose-900/30 shadow-sm"
                   >
                     <Power size={11} />
                     Force Sign Out
@@ -661,11 +651,11 @@ export const LoginActivity: React.FC = () => {
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-50 to-brand-100 dark:from-brand-950/20 dark:to-brand-900/40 flex items-center justify-center font-bold text-brand-600 dark:text-brand-400 uppercase text-2xl shadow-inner mb-3">
                     {selectedLog.userName ? selectedLog.userName[0] : '?'}
                   </div>
-                  <h3 className="text-lg font-black text-surface-900 dark:text-white leading-tight">{selectedLog.userName || 'Failed Credentials'}</h3>
+                  <h3 className="text-base font-semibold text-surface-900 dark:text-white leading-tight">{selectedLog.userName || 'Failed Credentials'}</h3>
                   <p className="text-xs text-surface-500 mt-0.5">{selectedLog.email}</p>
                   
                   <span className={cn(
-                    "inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[10px] font-extrabold uppercase mt-3 shadow-inner",
+                    "inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-[10px] font-semibold uppercase mt-3 shadow-inner",
                     getStatusBadgeClass(selectedLog.status)
                   )}>
                     {selectedLog.status}
@@ -674,23 +664,23 @@ export const LoginActivity: React.FC = () => {
 
                 {/* Audit Grid */}
                 <div className="space-y-4">
-                  <h4 className="text-[11px] font-black text-surface-400 uppercase tracking-widest pl-1 border-b border-surface-50 dark:border-surface-800 pb-2">Session Parameters</h4>
+                  <h4 className="text-[11px] font-semibold text-surface-400 uppercase tracking-wide pl-1 border-b border-surface-50 dark:border-surface-800 pb-2">Login Information</h4>
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1 p-3 bg-surface-50/50 dark:bg-surface-950/20 rounded-2xl border border-surface-100/50 dark:border-surface-800/50">
-                      <p className="text-[9px] font-black text-surface-400 uppercase tracking-widest">Login Type</p>
+                      <p className="text-[9px] font-semibold text-surface-400 uppercase tracking-wide">Login Method</p>
                       <p className="text-xs font-bold dark:text-white">{selectedLog.loginType}</p>
                     </div>
                     <div className="space-y-1 p-3 bg-surface-50/50 dark:bg-surface-950/20 rounded-2xl border border-surface-100/50 dark:border-surface-800/50">
-                      <p className="text-[9px] font-black text-surface-400 uppercase tracking-widest">Role Claim</p>
-                      <p className="text-xs font-bold dark:text-white uppercase tracking-wider">{selectedLog.role || 'N/A'}</p>
+                      <p className="text-[9px] font-semibold text-surface-400 uppercase tracking-wide">User Role</p>
+                      <p className="text-xs font-bold dark:text-white uppercase tracking-wide">{selectedLog.role || 'N/A'}</p>
                     </div>
                     <div className="space-y-1 p-3 bg-surface-50/50 dark:bg-surface-950/20 rounded-2xl border border-surface-100/50 dark:border-surface-800/50 col-span-2">
-                      <p className="text-[9px] font-black text-surface-400 uppercase tracking-widest">IP Address</p>
+                      <p className="text-[9px] font-semibold text-surface-400 uppercase tracking-wide">IP Address</p>
                       <p className="text-xs font-mono font-bold dark:text-white">{selectedLog.ipAddress}</p>
                     </div>
                     <div className="space-y-1 p-3 bg-surface-50/50 dark:bg-surface-950/20 rounded-2xl border border-surface-100/50 dark:border-surface-800/50 col-span-2">
-                      <p className="text-[9px] font-black text-surface-400 uppercase tracking-widest">Client Location</p>
+                      <p className="text-[9px] font-semibold text-surface-400 uppercase tracking-wide">Location</p>
                       <p className="text-xs font-bold dark:text-white flex items-center gap-1.5">
                         <Globe size={14} className="text-brand-500" />
                         {selectedLog.location}
@@ -701,7 +691,7 @@ export const LoginActivity: React.FC = () => {
 
                 {/* Device Profile */}
                 <div className="space-y-4">
-                  <h4 className="text-[11px] font-black text-surface-400 uppercase tracking-widest pl-1 border-b border-surface-50 dark:border-surface-800 pb-2">Device Profile</h4>
+                  <h4 className="text-[11px] font-semibold text-surface-400 uppercase tracking-wide pl-1 border-b border-surface-50 dark:border-surface-800 pb-2">Device Information</h4>
                   
                   <div className="p-4 bg-surface-50/50 dark:bg-surface-950/20 rounded-2xl border border-surface-100/50 dark:border-surface-800/50 space-y-3">
                     <div className="flex items-center justify-between text-xs">
@@ -721,7 +711,7 @@ export const LoginActivity: React.FC = () => {
                     </div>
                     {selectedLog.userAgent && (
                       <div className="pt-2 border-t border-surface-100 dark:border-surface-800/40">
-                        <p className="text-[9px] font-black text-surface-400 uppercase tracking-widest">User Agent Header</p>
+                        <p className="text-[9px] font-semibold text-surface-400 uppercase tracking-wide">User Agent Header</p>
                         <p className="text-[10px] font-mono text-surface-500 dark:text-surface-400 break-words mt-1 leading-relaxed">{selectedLog.userAgent}</p>
                       </div>
                     )}
@@ -730,14 +720,14 @@ export const LoginActivity: React.FC = () => {
 
                 {/* Security Timeline */}
                 <div className="space-y-4">
-                  <h4 className="text-[11px] font-black text-surface-400 uppercase tracking-widest pl-1 border-b border-surface-50 dark:border-surface-800 pb-2">Audit Timestamp Lifecycle</h4>
+                  <h4 className="text-[11px] font-semibold text-surface-400 uppercase tracking-wide pl-1 border-b border-surface-50 dark:border-surface-800 pb-2">Activity Time</h4>
                   
                   <div className="space-y-6 pl-4 relative before:absolute before:left-[7px] before:top-2 before:bottom-2 before:w-0.5 before:bg-surface-100 dark:before:bg-surface-800">
                     {/* Event 1: Login */}
                     <div className="relative">
                       <div className="absolute -left-[23px] top-1 w-3 h-3 rounded-full bg-white dark:bg-surface-900 border-[3.5px] border-brand-500 shadow-sm" />
                       <div className="text-xs">
-                        <p className="font-bold text-surface-900 dark:text-white uppercase tracking-wider">Access Connection Requested</p>
+                        <p className="font-bold text-surface-900 dark:text-white uppercase tracking-wide">Login Requested</p>
                         <p className="text-[10px] font-semibold text-surface-500 mt-0.5">
                           {selectedLog.loginTime ? new Date(selectedLog.loginTime).toLocaleString() : 'N/A'}
                         </p>
@@ -751,8 +741,8 @@ export const LoginActivity: React.FC = () => {
                         selectedLog.status === 'Success' ? 'border-emerald-500' : 'border-rose-500'
                       )} />
                       <div className="text-xs">
-                        <p className="font-bold text-surface-900 dark:text-white uppercase tracking-wider">
-                          {selectedLog.status === 'Success' ? 'Authorization Verified' : 'Authentication Rejected'}
+                        <p className="font-bold text-surface-900 dark:text-white uppercase tracking-wide">
+                          {selectedLog.status === 'Success' ? 'Login Successful' : 'Login Failed'}
                         </p>
                         {selectedLog.failureReason && (
                           <div className="mt-1.5 p-2 bg-rose-50/50 dark:bg-rose-950/20 rounded-lg border border-rose-100/50 dark:border-rose-900/25">
@@ -767,8 +757,8 @@ export const LoginActivity: React.FC = () => {
                       <div className="relative">
                         <div className="absolute -left-[23px] top-1 w-3 h-3 rounded-full bg-white dark:bg-surface-900 border-[3.5px] border-slate-400 dark:border-slate-600 shadow-sm" />
                         <div className="text-xs">
-                          <p className="font-bold text-surface-900 dark:text-white uppercase tracking-wider">
-                            {selectedLog.status === 'Logged Out' ? 'Client Logout Executed' : 'Token Session Invalidated'}
+                          <p className="font-bold text-surface-900 dark:text-white uppercase tracking-wide">
+                            {selectedLog.status === 'Logged Out' ? 'User Logged Out' : 'Session Ended'}
                           </p>
                           <p className="text-[10px] font-semibold text-surface-500 mt-0.5">
                             {selectedLog.logoutTime ? new Date(selectedLog.logoutTime).toLocaleString() : 'N/A'}
@@ -786,15 +776,15 @@ export const LoginActivity: React.FC = () => {
 
                 {/* Audit Security Flags */}
                 <div className="space-y-4">
-                  <h4 className="text-[11px] font-black text-surface-400 uppercase tracking-widest pl-1 border-b border-surface-50 dark:border-surface-800 pb-2">Threat Intelligence Checks</h4>
+                  <h4 className="text-[11px] font-semibold text-surface-400 uppercase tracking-wide pl-1 border-b border-surface-50 dark:border-surface-800 pb-2">Security Check</h4>
                   <div className="p-4 rounded-2xl bg-surface-50/50 dark:bg-surface-950/20 border border-surface-150/50 dark:border-surface-800/50 flex items-start gap-3">
                     {selectedLog.isSuspicious ? (
                       <>
                         <ShieldAlert className="text-rose-600 shrink-0 mt-0.5" size={18} />
                         <div>
-                          <p className="text-xs font-bold text-rose-700 dark:text-rose-400">Suspicious Activity Triggered</p>
+                          <p className="text-xs font-bold text-rose-700 dark:text-rose-450">Unusual Activity Found</p>
                           <p className="text-[10px] text-surface-500 leading-normal mt-1">
-                            This connection has triggered security flags. Indicators might include: repetitive failed password attempts, loopback proxy detection, or unrecognized user agent signatures. We recommend auditing the user account.
+                            This login looks unusual. This can happen due to multiple incorrect password attempts or logging in from a new place.
                           </p>
                         </div>
                       </>
@@ -802,9 +792,9 @@ export const LoginActivity: React.FC = () => {
                       <>
                         <ShieldCheck className="text-emerald-600 shrink-0 mt-0.5" size={18} />
                         <div>
-                          <p className="text-xs font-bold text-emerald-700 dark:text-emerald-450">Connection Clear & Secure</p>
+                          <p className="text-xs font-bold text-emerald-700 dark:text-emerald-450">Safe Connection</p>
                           <p className="text-[10px] text-surface-500 leading-normal mt-1">
-                            No suspicious metrics were recorded for this connection profile. Handshake was fully verified and is validated as standard.
+                            This login was secure. No security issues were detected.
                           </p>
                         </div>
                       </>
