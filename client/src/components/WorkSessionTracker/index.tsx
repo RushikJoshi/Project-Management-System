@@ -60,6 +60,7 @@ function reasonErrors(reason: TaskReason) {
     else if (reason.reason.trim().length < 20) errors.reason = 'Use at least 20 characters.';
   } else if (reason.mode === 'extension') {
     if (!reason.reason.trim()) errors.reason = 'Reason is required.';
+    else if (reason.reason.trim().length < 20) errors.reason = 'Use at least 20 characters.';
     if (!reason.expectedCompletion) errors.expectedCompletion = 'Expected completion is required.';
     else if (new Date(reason.expectedCompletion) <= new Date()) errors.expectedCompletion = 'Choose a future date and time.';
   }
@@ -109,7 +110,11 @@ function PendingTaskModal({
 
   const submit = async (mode: 'submit_reason' | 'request_extension') => {
     setTouched(true);
-    if (!allValid || submitting) return;
+    if (!allValid) {
+      emitErrorToast('Please select an option and complete all required fields for each pending task.');
+      return;
+    }
+    if (submitting) return;
     try {
       setSubmitting(true);
       

@@ -65,10 +65,22 @@ export const Topbar: React.FC = () => {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+      const target = event.target as HTMLElement;
+      // Do not close search or profile dropdown if the click target is inside a Radix UI dialog or portal/modal.
+      if (
+        target &&
+        target.closest &&
+        (target.closest('[role="dialog"]') ||
+         target.closest('[data-radix-portal]') ||
+         target.closest('.fixed'))
+      ) {
+        return;
+      }
+
+      if (searchRef.current && !searchRef.current.contains(target)) {
         setSearchOpen(false);
       }
-      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+      if (profileRef.current && !profileRef.current.contains(target)) {
         setProfileOpen(false);
       }
     };
