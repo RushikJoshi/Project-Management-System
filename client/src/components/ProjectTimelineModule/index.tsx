@@ -274,6 +274,13 @@ export const ProjectTimelineModule: React.FC<ProjectTimelineModuleProps> = ({ pr
           .map((id) => users.find((u) => u.id === id)?.name || id)
           .join(', ');
 
+        const dependenciesText = (task.dependencies || [])
+          .map((depId) => {
+            const depTask = activeTimeline.tasks.find((t) => t.id === depId);
+            return depTask ? `${depTask.title} (${depTask.status})` : depId;
+          })
+          .join(', ');
+
         return `
           <tr>
             <td>${phase.name}</td>
@@ -284,7 +291,7 @@ export const ProjectTimelineModule: React.FC<ProjectTimelineModuleProps> = ({ pr
             <td>${task.endDate}</td>
             <td>${task.durationInDays}</td>
             <td>${task.status}</td>
-            <td>${task.dependencies.join(', ')}</td>
+            <td>${dependenciesText || '-'}</td>
           </tr>
         `;
       }))
@@ -326,68 +333,187 @@ export const ProjectTimelineModule: React.FC<ProjectTimelineModuleProps> = ({ pr
     const headerHeight = 56;
     const sidebarWidth = SIDEBAR_WIDTH;
     const dayCellWidth = 22;
-    const rightPadding = 80;
+    const rightPadding = 120; // Increased padding for task titles next to bars
     const width = sidebarWidth + activeTimeline.projectWindow.totalDays * dayCellWidth + rightPadding;
     const height = timelineCanvasHeight + 32;
     const dependencyRows = new Map(rows.filter((row) => row.kind === 'task').map((row) => [row.task.id, row]));
 
+    // 1. Alternating grid columns (clean transparent background columns)
     const backgroundColumns = Array.from({ length: activeTimeline.projectWindow.totalDays }).map((_, index) => {
-      const fill = Math.floor(index / 7) % 2 === 0 ? '#ffffff' : '#f8fafc';
-      return `<rect x="${sidebarWidth + index * dayCellWidth}" y="${headerHeight}" width="${dayCellWidth}" height="${timelineCanvasHeight - headerHeight}" fill="${fill}" stroke="#e2e8f0" stroke-width="0.5" />`;
+      const x = sidebarWidth + index * dayCellWidth;
+      const isWeekend = (index % 7 === 5 || index % 7 === 6); // Sat & Sun soft shading
+      const fill = isWeekend ? '#f1f5f9' : '#ffffff';
+      return `<rect x="${x}" y="${headerHeight}" width="${dayCellWidth}" height="${timelineCanvasHeight - headerHeight}" fill="${fill}" stroke="#e2e8f0" stroke-width="0.5" />`;
     }).join('');
 
+    // 2. Week Divider lines and titles at the top
+    const headerWeeks = [];
+    const totalWeeks = Math.ceil(activeTimeline.projectWindow.totalDays / 7);
+    for (let i = 0; i < totalWeeks; i++) {
+      const x = sidebarWidth + i * 7 * dayCellWidth;
+      headerWeeks.push(`
+        <line x1="${x}" y1="0" x2="${x}" y2="${height}" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="3,3" />
+        <text x="${x + 6}" y="32" fill="#475569" font-size="10" font-weight="800" letter-spacing="0.5">WEEK ${i + 1}</text>
+      `);
+    }
+
+    // Helper to calculate darker gradient color
+    const adjustColorBrightness = (hex: string, percent: number) => {
+      try {
+        const cleanHex = hex.replace('#', '');
+        let num = parseInt(cleanHex, 16);
+        let amt = Math.round(2.55 * percent);
+        let R = (num >> 16) + amt;
+        let G = ((num >> 8) & 0x00FF) + amt;
+        let B = (num & 0x0000FF) + amt;
+        return '#' + (
+          0x1000000 +
+          (R < 255 ? (R < 0 ? 0 : R) : 255) * 0x10000 +
+          (G < 255 ? (G < 0 ? 0 : G) : 255) * 0x100 +
+          (B < 255 ? (B < 0 ? 0 : B) : 255)
+        ).toString(16).slice(1);
+      } catch {
+        return hex;
+      }
+    };
+
+    const projectColor = project.color || '#2563eb';
+    const projectColorDark = adjustColorBrightness(projectColor, -20);
+
+    // 3. Render phases and task rows elegantly
     const phaseBands = rows.map((row) => {
       if (row.kind === 'phase') {
+        const phaseColor = row.phase.color || '#64748b';
         return `
-          <rect x="0" y="${row.top + headerHeight}" width="${width}" height="${row.height}" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
-          <text x="28" y="${row.top + headerHeight + 25}" fill="#64748b" font-size="12" font-weight="700" letter-spacing="2">${row.phase.name.toUpperCase()}</text>
+          <!-- Phase Row -->
+          <rect x="0" y="${row.top + headerHeight}" width="${width}" height="${row.height}" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5" />
+          <rect x="0" y="${row.top + headerHeight}" width="6" height="${row.height}" fill="${phaseColor}" />
+          <text x="24" y="${row.top + headerHeight + 25}" fill="#334155" font-size="11" font-weight="800" letter-spacing="1.5">${row.phase.name.toUpperCase()}</text>
         `;
       }
 
+      // Task row background covering only the sidebar
       const barX = sidebarWidth + row.task.startOffset * dayCellWidth;
       const barWidth = Math.max(dayCellWidth, row.task.durationInDays * dayCellWidth);
-      const barY = row.top + headerHeight + 10;
+      const barY = row.top + headerHeight + 12;
+      const barHeight = row.height - 24;
+
+      // Smart title positioning to prevent text clipping!
+      const showInside = barWidth >= 130;
+      const textX = showInside ? barX + 12 : barX + barWidth + 8;
+      const textY = barY + 16;
+      const textColor = showInside ? '#ffffff' : '#334155';
+      const textWeight = showInside ? '700' : '600';
+
+      // Check if task is milestone
+      const isMilestone = row.task.type === 'milestone';
+
+      let taskBarSvg = '';
+      if (isMilestone) {
+        // Render diamond for milestone
+        const centerX = barX + dayCellWidth / 2;
+        const centerY = barY + barHeight / 2;
+        const size = 10;
+        const points = `${centerX},${centerY - size} ${centerX + size},${centerY} ${centerX},${centerY + size} ${centerX - size},${centerY}`;
+        taskBarSvg = `
+          <polygon points="${points}" fill="#ef4444" stroke="#dc2626" stroke-width="1.5" />
+          <text x="${centerX + 16}" y="${centerY + 4}" fill="#ef4444" font-size="11" font-weight="700">${row.task.title} (Milestone)</text>
+        `;
+      } else {
+        // Render professional bar with inner progress shade
+        const progressWidth = (barWidth * (row.task.progress || 0)) / 100;
+        taskBarSvg = `
+          <!-- Bar Outer Base -->
+          <rect x="${barX}" y="${barY}" width="${barWidth}" height="${barHeight}" rx="8" ry="8" fill="url(#barGradient)" filter="url(#shadow)" />
+          
+          <!-- Bar Progress Overlay -->
+          ${progressWidth > 0 ? `<rect x="${barX}" y="${barY}" width="${progressWidth}" height="${barHeight}" rx="8" ry="8" fill="url(#barProgressGradient)" opacity="0.8" />` : ''}
+          
+          <!-- Task Title Text -->
+          <text x="${textX}" y="${textY}" fill="${textColor}" font-size="11" font-weight="${textWeight}">${row.task.title}</text>
+        `;
+      }
+
       return `
-        <rect x="0" y="${row.top + headerHeight}" width="${width}" height="${row.height}" fill="#ffffff" stroke="#eef2f7" stroke-width="1" />
-        <text x="24" y="${row.top + headerHeight + 24}" fill="#0f172a" font-size="12" font-weight="700">${row.task.title}</text>
-        <text x="24" y="${row.top + headerHeight + 42}" fill="#94a3b8" font-size="10">${row.task.startDate} to ${row.task.endDate}</text>
-        <rect x="${barX}" y="${barY}" width="${barWidth}" height="${row.height - 20}" rx="10" ry="10" fill="#2563eb" opacity="0.92" />
-        <text x="${barX + 14}" y="${barY + 18}" fill="#ffffff" font-size="12" font-weight="700">${row.task.title}</text>
+        <!-- Task Row Background & Separator -->
+        <rect x="0" y="${row.top + headerHeight}" width="${sidebarWidth}" height="${row.height}" fill="#ffffff" />
+        <line x1="0" y1="${row.top + headerHeight + row.height}" x2="${width}" y2="${row.top + headerHeight + row.height}" stroke="#e2e8f0" stroke-width="0.5" />
+        
+        <!-- Task Identity (Sidebar) -->
+        <text x="24" y="${row.top + headerHeight + 24}" fill="#0f172a" font-size="11" font-weight="700">${row.task.title}</text>
+        <text x="24" y="${row.top + headerHeight + 40}" fill="#64748b" font-size="9" font-weight="500">${row.task.startDate} to ${row.task.endDate} (${row.task.durationInDays}d)</text>
+        
+        <!-- Task Gantt Visual -->
+        ${taskBarSvg}
       `;
     }).join('');
 
+    // 4. Elegant dependency arrows with modern styling
     const dependencyLines = activeTimeline.dependencies.map((dependency, idx) => {
       const fromRow = dependencyRows.get(dependency.fromTaskId);
       const toRow = dependencyRows.get(dependency.toTaskId);
       if (!fromRow || !toRow || fromRow.kind !== 'task' || toRow.kind !== 'task') return '';
 
-      // Anchor points: End of source -> Start of target
       const fromX = sidebarWidth + (fromRow.task.endOffset + 1) * dayCellWidth;
       const fromY = headerHeight + fromRow.top + fromRow.height / 2;
       const toX = sidebarWidth + toRow.task.startOffset * dayCellWidth;
       const toY = headerHeight + toRow.top + toRow.height / 2;
 
-      // Routing: Go from (fromX, fromY) to (toX, toY)
-      // To ensure arrow points RIGHT, the last segment must be L (toX - epsilon) (toY) to (toX) (toY)
-      const approachX = toX - 6;
+      const approachX = toX - 8;
       const d = `M ${fromX} ${fromY} L ${approachX} ${fromY} L ${approachX} ${toY} L ${toX - 1} ${toY}`;
 
-      return `<path d="${d}" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrowhead)" />`;
+      return `<path d="${d}" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)" opacity="0.85" />`;
     }).join('');
 
     const svg = `
       <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
         <defs>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap');
+            text {
+              font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            }
+          </style>
+          <linearGradient id="barGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="${projectColor}" />
+            <stop offset="100%" stop-color="${projectColorDark}" />
+          </linearGradient>
+          <linearGradient id="barProgressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#1e1b4b" stop-opacity="0.15" />
+            <stop offset="100%" stop-color="#1e1b4b" stop-opacity="0.45" />
+          </linearGradient>
           <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-            <path d="M 0 0 L 6 3 L 0 6 z" fill="#94a3b8" />
+            <path d="M 0 0 L 6 3 L 0 6 z" fill="#64748b" />
           </marker>
+          <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.08" />
+          </filter>
         </defs>
+        
+        <!-- Base Canvas -->
         <rect width="${width}" height="${height}" fill="#f8fafc" />
-        <rect x="0" y="0" width="${width}" height="${headerHeight}" fill="#ffffff" />
-        <rect x="0" y="0" width="${sidebarWidth}" height="${height}" fill="#ffffff" />
-        <text x="24" y="34" fill="#94a3b8" font-size="14" font-weight="700" letter-spacing="3">TIMELINE OUTLINE</text>
+        
+        <!-- Background Grid columns -->
         ${backgroundColumns}
+        
+        <!-- Dependency Connection Paths -->
         ${dependencyLines}
+        
+        <!-- Header Background & Dividers -->
+        <rect x="0" y="0" width="${width}" height="${headerHeight}" fill="#ffffff" />
+        <line x1="0" y1="${headerHeight}" x2="${width}" y2="${headerHeight}" stroke="#cbd5e1" stroke-width="1" />
+        
+        <!-- Sidebar Base & Dividers -->
+        <rect x="0" y="0" width="${sidebarWidth}" height="${height}" fill="#ffffff" />
+        <line x1="${sidebarWidth}" y1="0" x2="${sidebarWidth}" y2="${height}" stroke="#cbd5e1" stroke-width="1.5" />
+        
+        <!-- Timeline Header Title -->
+        <text x="24" y="33" fill="#1e293b" font-size="13" font-weight="800" letter-spacing="2">PROJECT TIMELINE</text>
+        
+        <!-- Weekly headers -->
+        ${headerWeeks.join('')}
+        
+        <!-- Phase Groups & Task Rows -->
         ${phaseBands}
       </svg>
     `;

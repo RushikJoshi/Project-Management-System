@@ -16,28 +16,11 @@ import { ColorPicker } from '../../components/ColorPicker';
 import { UserAvatar, AvatarGroup } from '../../components/UserAvatar';
 import { ProgressBar, EmptyState, Dropdown, DatePicker } from '../../components/ui';
 import { Modal } from '../../components/Modal';
-import { EnterpriseTimeline } from '../../components/EnterpriseTimeline';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import type { Project, ProjectStatus, Role } from '../../app/types';
 import { projectsService } from '../../services/api';
 import { emitErrorToast, emitSuccessToast } from '../../context/toastBus';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+
 
 const STATUS_FILTERS: { value: ProjectStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -56,13 +39,15 @@ const PROJECT_STATUS_BADGES: Record<ProjectStatus, { label: string; className: s
 
 const DEPARTMENTS = ['General', 'Development', 'Design', 'Marketing', 'Product'];
 const INITIAL_SDLC = [
-  { name: 'Requirement Analysis', durationDays: 5, enabled: true },
-  { name: 'Project Planning', durationDays: 3, enabled: true },
-  { name: 'UI/UX Design', durationDays: 4, enabled: true },
-  { name: 'Development', durationDays: 15, enabled: true },
-  { name: 'Testing', durationDays: 5, enabled: true },
-  { name: 'Deployment', durationDays: 2, enabled: true }
+  { name: 'Requirement', durationDays: 0, enabled: true },
+  { name: 'Analysis', durationDays: 0, enabled: true },
+  { name: 'Design', durationDays: 0, enabled: true },
+  { name: 'Development', durationDays: 0, enabled: true },
+  { name: 'Testing', durationDays: 0, enabled: true },
+  { name: 'Deployment', durationDays: 0, enabled: true },
+  { name: 'Maintenance', durationDays: 0, enabled: false }
 ];
+
 
 interface ProjectFormData {
   name: string;
@@ -172,107 +157,6 @@ const ProjectRow: React.FC<{ project: Project; onDelete: (id: string) => void; o
   );
 };
 
-interface SortableStageRowProps {
-  id: string;
-  index: number;
-  field: any;
-  register: any;
-  watch: any;
-  remove: (index: number) => void;
-}
-
-const SortableStageRow: React.FC<SortableStageRowProps> = ({
-  id,
-  index,
-  field,
-  register,
-  watch,
-  remove,
-}) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id });
-
-  const isEnabled = watch(`sdlcPlan.${index}.enabled`);
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 50 : undefined,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "flex items-center gap-3 p-3 rounded-2xl border transition-all bg-white dark:bg-surface-800 shadow-sm border-surface-200 dark:border-surface-800",
-        isDragging && "opacity-60 border-brand-500 shadow-lg scale-[1.01] z-50",
-        !isEnabled && "opacity-50 bg-surface-50/50 dark:bg-surface-900/30 border-surface-150"
-      )}
-    >
-      {/* Drag Handle */}
-      <button
-        type="button"
-        {...attributes}
-        {...listeners}
-        className="cursor-grab active:cursor-grabbing text-surface-400 hover:text-surface-600 transition-colors p-1"
-      >
-        <GripVertical size={14} />
-      </button>
-
-      {/* Enabled Checkbox */}
-      <label className="flex items-center justify-center cursor-pointer p-1">
-        <div className={cn(
-          "w-4 h-4 rounded-md border flex items-center justify-center transition-all",
-          isEnabled ? "bg-brand-500 border-brand-500 text-white" : "bg-white dark:bg-surface-800 border-surface-300"
-        )}>
-          {isEnabled && <Check size={10} strokeWidth={4} />}
-        </div>
-        <input type="checkbox" {...register(`sdlcPlan.${index}.enabled`)} className="hidden" />
-      </label>
-
-      {/* Stage Name Input - Editable! */}
-      <div className="flex-1">
-        <input
-          type="text"
-          {...register(`sdlcPlan.${index}.name`, { required: true })}
-          className="w-full bg-transparent border-none p-0 text-xs font-bold text-surface-800 dark:text-surface-100 outline-none focus:ring-0 placeholder:text-surface-300"
-          placeholder="Stage Name"
-        />
-      </div>
-
-      {/* Duration Days Input */}
-      {isEnabled && (
-        <div className="flex items-center gap-1.5 flex-shrink-0 w-24">
-          <input
-            type="number"
-            {...register(`sdlcPlan.${index}.durationDays`)}
-            className="w-full bg-surface-50 dark:bg-surface-900 border border-surface-200 dark:border-surface-700 rounded-lg px-2 h-7 text-xs font-semibold text-brand-600 dark:text-brand-400 outline-none text-center"
-            placeholder="0"
-            min={1}
-          />
-          <span className="text-[10px] text-surface-400 font-bold uppercase tracking-tight">Days</span>
-        </div>
-      )}
-
-      {/* Delete / Remove custom stage */}
-      <button
-        type="button"
-        onClick={() => remove(index)}
-        className="text-surface-300 hover:text-rose-500 p-1 transition-colors flex-shrink-0"
-        title="Remove stage"
-      >
-        <Trash2 size={13} />
-      </button>
-    </div>
-  );
-};
 
 export const ProjectsPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -317,27 +201,7 @@ export const ProjectsPage: React.FC = () => {
     }
   });
 
-  const { fields: sdlcFields, append, remove, move } = useFieldArray({ control, name: 'sdlcPlan' });
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      const oldIndex = sdlcFields.findIndex((f) => f.id === active.id);
-      const newIndex = sdlcFields.findIndex((f) => f.id === over.id);
-      move(oldIndex, newIndex);
-    }
-  };
+  const { fields: sdlcFields } = useFieldArray({ control, name: 'sdlcPlan' });
 
   const watchSdlc = watch('sdlcPlan');
   const watchStart = watch('startDate');
@@ -400,7 +264,7 @@ export const ProjectsPage: React.FC = () => {
       setSelectedMembers(project.members);
       setSelectedReporters(project.reportingPersonIds);
       const mappedSdlc = INITIAL_SDLC.map(base => {
-        const existing = project.sdlcPlan?.find(p => p.name === base.name);
+        const existing = project.sdlcPlan?.find((p: any) => p.name === base.name);
         return existing ? { name: existing.name, durationDays: existing.durationDays, enabled: true } : { ...base, enabled: false };
       });
       setValue('sdlcPlan', mappedSdlc);
@@ -829,66 +693,44 @@ export const ProjectsPage: React.FC = () => {
             {/* Workflow Section */}
             <div className="space-y-4 pt-2 border-t border-surface-50 dark:border-surface-800/50">
               <div className="flex items-center justify-between">
-                <div className="flex flex-col">
-                  <label className="text-xs font-bold uppercase tracking-wider text-surface-700 dark:text-surface-300 ml-1">
-                    📋 Customize Project Stages & Timeline
-                  </label>
-                  <p className="text-[10px] text-surface-400 mt-0.5 ml-1">
-                    Drag milestones to reorder, edit names/days, or toggle them to match your flow.
-                  </p>
-                </div>
-                <div className="text-[10px] font-black text-brand-600 dark:text-brand-400 uppercase tracking-widest bg-brand-50 dark:bg-brand-950/30 px-3 py-1 rounded-full border border-brand-100 dark:border-brand-900/30">
-                  {totalDays} Total Days
-                </div>
+                <label className="text-[11px] font-bold uppercase tracking-widest text-surface-400 dark:text-surface-500 mb-1 ml-1">SDLC Workflow Setup</label>
+                <div className="text-[10px] font-black text-brand-600 dark:text-brand-400 uppercase tracking-widest">{totalDays} Total Days</div>
               </div>
 
-              {/* Sortable Stages List */}
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={sdlcFields.map((f) => f.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="space-y-2 max-h-80 overflow-y-auto pr-1 py-1 custom-scrollbar">
-                    {sdlcFields.map((field, index) => (
-                      <SortableStageRow
-                        key={field.id}
-                        id={field.id}
-                        index={index}
-                        field={field}
-                        register={register}
-                        watch={watch}
-                        remove={remove}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-
-              {/* Add Custom Stage & Live Preview Row */}
-              <div className="flex justify-between items-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => append({ name: 'New Custom Stage', durationDays: 5, enabled: true })}
-                  className="btn-secondary btn-sm px-4 text-xs font-bold border border-surface-200 dark:border-surface-800"
-                >
-                  ➕ Add Custom Stage
-                </button>
-              </div>
-
-              {/* Enterprise Timeline Live Preview */}
-              <div className="pt-2">
-                <EnterpriseTimeline
-                  startDate={watch('startDate')}
-                  sdlcPlan={watchSdlc ? watchSdlc.map(s => ({
-                    name: s.name || '',
-                    durationDays: Number(s.durationDays) || 0,
-                    enabled: s.enabled
-                  })) : []}
-                />
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+                {sdlcFields.map((field, index) => {
+                  const isEnabled = watch(`sdlcPlan.${index}.enabled`);
+                  return (
+                    <div key={field.id} className={cn(
+                      "p-2.5 rounded-xl border transition-all flex flex-col gap-2 group relative overflow-hidden", 
+                      isEnabled 
+                        ? "bg-white dark:bg-surface-800 border-brand-500/20 shadow-sm" 
+                        : "bg-surface-50/40 dark:bg-surface-900/40 border-surface-100 dark:border-surface-800 opacity-60"
+                    )}>
+                      <label className="flex items-center gap-2 cursor-pointer z-10">
+                        <div className={cn(
+                          "w-3.5 h-3.5 rounded-md border flex items-center justify-center transition-all",
+                          isEnabled ? "bg-brand-500 border-brand-500 text-white" : "bg-white dark:bg-surface-800 border-surface-300"
+                        )}>
+                          {isEnabled && <Check size={10} strokeWidth={4} />}
+                        </div>
+                        <input type="checkbox" {...register(`sdlcPlan.${index}.enabled`)} className="hidden" />
+                        <span className="text-[9px] font-black text-surface-700 dark:text-surface-200 uppercase tracking-tight truncate leading-none">{field.name}</span>
+                      </label>
+                      
+                      {isEnabled && (
+                        <div className="relative z-10">
+                          <input 
+                            type="number" 
+                            {...register(`sdlcPlan.${index}.durationDays`)} 
+                            className="w-full bg-surface-50 dark:bg-surface-900 border border-brand-100 dark:border-brand-900/50 rounded-lg px-2 h-7 text-[10px] font-bold text-brand-600 dark:text-brand-400 outline-none" 
+                            placeholder="0" 
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

@@ -23,7 +23,7 @@ import { Modal } from '../../components/Modal';
 import { ProjectTaskCreateModal, type ProjectTaskCreateValues } from '../../components/ProjectTaskCreateModal';
 import { HighDensityTaskList } from '../../components/HighDensityTaskList';
 import { ProjectPerformanceTab } from '../../components/ProjectPerformanceTab';
-import { EnterpriseTimeline } from '../../components/EnterpriseTimeline';
+
 
 
 export const ProjectDetailPage: React.FC = () => {
@@ -596,16 +596,7 @@ export const ProjectDetailPage: React.FC = () => {
             />
           </div>
         </TabsContent>
-        <TabsContent value="timeline" className="pt-4 space-y-6">
-          {project.sdlcPlan && project.sdlcPlan.length > 0 && (
-            <EnterpriseTimeline
-              startDate={project.startDate}
-              endDate={project.endDate}
-              sdlcPlan={project.sdlcPlan}
-              projectProgress={project.progress}
-              projectStatus={project.status}
-            />
-          )}
+        <TabsContent value="timeline" className="pt-4">
           <ProjectTimelineModule projectId={project.id} />
         </TabsContent>
 

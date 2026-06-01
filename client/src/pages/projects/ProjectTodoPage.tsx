@@ -31,6 +31,7 @@ import { EmptyState } from '../../components/ui';
 import type { Task, TaskStatus, TaskType, TaskSubtask, TimelinePhase } from '../../app/types';
 import { ProjectTaskCreateModal, type ProjectTaskCreateValues } from '../../components/ProjectTaskCreateModal';
 import { LabelManagementModal } from '../../components/LabelManagementModal';
+import { PaginationControls } from '../../components/PaginationControls';
 
 function mapApiTask(x: Record<string, unknown>): Task {
   const subs = (Array.isArray(x.subtasks) ? x.subtasks : []) as TaskSubtask[];
@@ -213,6 +214,28 @@ export const ProjectTodoPage: React.FC = () => {
 
   const activeTasks = useMemo(() => filteredTasks.filter((t) => t.status !== 'done'), [filteredTasks]);
   const completedTasks = useMemo(() => filteredTasks.filter((t) => t.status === 'done'), [filteredTasks]);
+
+  const [activePage, setActivePage] = useState(1);
+  const [completedPage, setCompletedPage] = useState(1);
+
+  const activeTasksPageCount = Math.max(1, Math.ceil(activeTasks.length / 10));
+  const completedTasksPageCount = Math.max(1, Math.ceil(completedTasks.length / 10));
+
+  const paginatedActiveTasks = useMemo(() => activeTasks.slice((activePage - 1) * 10, activePage * 10), [activeTasks, activePage]);
+  const paginatedCompletedTasks = useMemo(() => completedTasks.slice((completedPage - 1) * 10, completedPage * 10), [completedTasks, completedPage]);
+
+  useEffect(() => {
+    setActivePage(1);
+    setCompletedPage(1);
+  }, [selectedCategoryId, selectedLabels, selectedTags]);
+
+  useEffect(() => {
+    if (activePage > activeTasksPageCount) setActivePage(activeTasksPageCount);
+  }, [activeTasksPageCount, activePage]);
+
+  useEffect(() => {
+    if (completedPage > completedTasksPageCount) setCompletedPage(completedTasksPageCount);
+  }, [completedTasksPageCount, completedPage]);
 
   const updateLocalTask = (id: string, patch: Partial<Task>) => {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
@@ -526,42 +549,66 @@ export const ProjectTodoPage: React.FC = () => {
     );
   };
 
-  const tableSection = (title: string, open: boolean, setOpen: (v: boolean) => void, list: Task[]) => (
-    <div className="rounded-2xl border border-surface-100 dark:border-surface-800 bg-white dark:bg-surface-900 shadow-sm overflow-hidden mb-4">
-      <button
-        type="button"
-        className="w-full flex items-center gap-2 px-4 py-3 text-left font-display font-semibold text-surface-900 dark:text-white hover:bg-surface-50 dark:hover:bg-surface-800/50"
-        onClick={() => setOpen(!open)}
-      >
-        {open ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-        {title}{' '}
-        <span className="text-surface-400 font-normal">({list.length})</span>
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-x-auto">
-            <table className="w-full text-left min-w-[800px]">
-              <thead>
-                <tr className="text-[11px] uppercase tracking-wider text-surface-400 border-t border-surface-100 dark:border-surface-800">
-                  <th className="py-2 px-3 font-semibold">Task name</th>
-                  <th className="py-2 px-2 font-semibold">Status</th>
-                  <th className="py-2 px-2 font-semibold">Type</th>
-                  <th className="py-2 px-2 font-semibold">Due date</th>
-                  <th className="py-2 px-2 font-semibold">Category</th>
-                  <th className="py-2 px-2 font-semibold">Responsible</th>
-                  <th className="py-2 px-2 font-semibold w-12" />
-                </tr>
-              </thead>
-              <tbody>{list.map(renderTaskRow)}</tbody>
-            </table>
-            {list.length === 0 && (
-              <p className="px-4 py-6 text-sm text-surface-500 text-center">No tasks in this section.</p>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
+  const tableSection = (
+    title: string,
+    open: boolean,
+    setOpen: (v: boolean) => void,
+    paginatedList: Task[],
+    totalItems: number,
+    page: number,
+    onPageChange: (p: number) => void
+  ) => {
+    const tasksPerPage = 10;
+    const totalPages = Math.max(1, Math.ceil(totalItems / tasksPerPage));
+
+    return (
+      <div className="rounded-2xl border border-surface-100 dark:border-surface-800 bg-white dark:bg-surface-900 shadow-sm overflow-hidden mb-4">
+        <button
+          type="button"
+          className="w-full flex items-center gap-2 px-4 py-3 text-left font-display font-semibold text-surface-900 dark:text-white hover:bg-surface-50 dark:hover:bg-surface-800/50"
+          onClick={() => setOpen(!open)}
+        >
+          {open ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+          {title}{' '}
+          <span className="text-surface-400 font-normal">({totalItems})</span>
+        </button>
+        <AnimatePresence>
+          {open && (
+            <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-x-auto">
+              <table className="w-full text-left min-w-[800px]">
+                <thead>
+                  <tr className="text-[11px] uppercase tracking-wider text-surface-400 border-t border-surface-100 dark:border-surface-800">
+                    <th className="py-2 px-3 font-semibold">Task name</th>
+                    <th className="py-2 px-2 font-semibold">Status</th>
+                    <th className="py-2 px-2 font-semibold">Type</th>
+                    <th className="py-2 px-2 font-semibold">Due date</th>
+                    <th className="py-2 px-2 font-semibold">Category</th>
+                    <th className="py-2 px-2 font-semibold">Responsible</th>
+                    <th className="py-2 px-2 font-semibold w-12" />
+                  </tr>
+                </thead>
+                <tbody>{paginatedList.map(renderTaskRow)}</tbody>
+              </table>
+              {totalItems === 0 && (
+                <p className="px-4 py-6 text-sm text-surface-500 text-center">No tasks in this section.</p>
+              )}
+              {totalItems > tasksPerPage && (
+                <div className="px-5 py-4 border-t border-surface-100 dark:border-surface-800 bg-gray-50/30 dark:bg-surface-950/20">
+                  <PaginationControls
+                    currentPage={page}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    itemsPerPage={tasksPerPage}
+                    onPageChange={onPageChange}
+                  />
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
 
   return (
     <div className="max-w-[1400px] mx-auto">
@@ -784,8 +831,8 @@ export const ProjectTodoPage: React.FC = () => {
         </div>
       ) : view === 'table' ? (
         <>
-          {tableSection('Active tasks', activeOpen, setActiveOpen, activeTasks)}
-          {tableSection('Completed tasks', completedOpen, setCompletedOpen, completedTasks)}
+          {tableSection('Active tasks', activeOpen, setActiveOpen, paginatedActiveTasks, activeTasks.length, activePage, setActivePage)}
+          {tableSection('Completed tasks', completedOpen, setCompletedOpen, paginatedCompletedTasks, completedTasks.length, completedPage, setCompletedPage)}
         </>
       ) : (
         <div className="rounded-2xl border border-surface-100 dark:border-surface-800 p-4 bg-white dark:bg-surface-900">
