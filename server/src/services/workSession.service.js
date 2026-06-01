@@ -256,7 +256,10 @@ async function completeSession({ companyId, workspaceId, employeeId, sessionId, 
 }
 
 export async function checkPendingTasks({ companyId, workspaceId, employeeId }) {
-  const pendingTasks = await getPendingTasks({ companyId, workspaceId, employeeId, todayOnly: false });
+  const allPending = await getPendingTasks({ companyId, workspaceId, employeeId, todayOnly: false });
+  
+  // Filter out tasks that are already in review (submitted for completion)
+  const pendingTasks = allPending.filter(task => task.status !== 'in_review');
   
   // Find tasks that have pending extension requests
   const { PendingTaskLog } = await getTenantModels(companyId);
