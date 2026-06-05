@@ -97,7 +97,7 @@ export const LoginPage: React.FC = () => {
         </button>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" autoComplete="off">
         {error && (
           <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-sm text-rose-600 dark:text-rose-400">
             {error}
@@ -118,6 +118,7 @@ export const LoginPage: React.FC = () => {
                   },
                 })}
                 type="email"
+                autoComplete="off"
                 placeholder="you@company.com"
                 className={cn('input pl-9', errors.email && 'border-rose-400 focus:border-rose-400 focus:ring-rose-400/20')}
               />
@@ -134,6 +135,7 @@ export const LoginPage: React.FC = () => {
                   {...register('companyCode', {
                     validate: (value) => (mode !== 'employee' || value.trim() ? true : 'Company code is required'),
                   })}
+                  autoComplete="off"
                   placeholder="Enter your company code"
                   className={cn('input pl-9', errors.companyCode && 'border-rose-400 focus:border-rose-400 focus:ring-rose-400/20')}
                 />
@@ -149,6 +151,7 @@ export const LoginPage: React.FC = () => {
                   {...register('employeeCode', {
                     validate: (value) => (mode !== 'employee' || value.trim() ? true : 'Employee code is required'),
                   })}
+                  autoComplete="off"
                   placeholder="Enter your employee code"
                   className={cn('input pl-9', errors.employeeCode && 'border-rose-400 focus:border-rose-400 focus:ring-rose-400/20')}
                 />
@@ -170,6 +173,7 @@ export const LoginPage: React.FC = () => {
             <input
               {...register('password', { required: 'Password is required' })}
               type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
               placeholder="Enter your password"
               className={cn('input pl-9 pr-10', errors.password && 'border-rose-400')}
             />
